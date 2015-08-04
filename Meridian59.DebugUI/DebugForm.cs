@@ -15,6 +15,8 @@
 */
 
 using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Meridian59.Data;
 using Meridian59.DebugUI.Events;
@@ -26,6 +28,8 @@ using Meridian59.Files;
 
 namespace Meridian59.DebugUI
 {
+
+
     public partial class DebugForm : Form
     {
         public event GameMessageEventHandler PacketSend;
@@ -77,12 +81,20 @@ namespace Meridian59.DebugUI
             }
         }
 
+        public AdminController AdminController { get; set; }
+
         public DebugForm()
         {
             InitializeComponent();
 
             guildMemberListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
             guildListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
+            AdminController = new AdminController();
+        }
+
+        public void HandleAdminMessage(AdminMessage Message)
+        {
+            AdminController.HandleAdminMessage(Message);
         }
 
         private void gamePacketViewer_PacketSend(object sender, GameMessageEventArgs e)
@@ -160,5 +172,63 @@ namespace Meridian59.DebugUI
             if (PacketSend != null)
                 PacketSend(this, new GameMessageEventArgs(new UserCommandMessage(new UserCommandGuildDisband(), null)));
         }
+
+        private void txtAdminCommand_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                if (PacketSend != null)
+                    PacketSend(this, new GameMessageEventArgs(new ReqAdminMessage(txtAdminCommand.Text)));
+                txtAdminCommand.Text = "";
+            }
+        }
+
     }
+
+    /// <summary>
+    /// These things need to be moved
+    /// </summary>
+
+    public class AdminObjectProperty
+    {
+        public string PropertyName { get; set; }
+        public string PropertyType { get; set; }
+        public string PropertyValue { get; set; }
+
+        public AdminObjectProperty(string name, string type, string value)
+        {
+            PropertyName = name;
+            PropertyType = type;
+            PropertyValue = value;
+        }
+    }
+
+    public class AdminObject
+    {
+        public List<AdminObjectProperty> Properties { get; private set; }
+        public string ClassName { get; set; }
+        public int ObjectNumber { get; set; }
+
+        public AdminObject(string classname, int objectnumber, List<AdminObjectProperty> props = null)
+        {
+            ClassName = classname;
+            ObjectNumber = objectnumber;
+            if (props != null)
+            {
+                Properties = props;
+            }
+            else
+            {
+                Properties = new List<AdminObjectProperty>();
+            }
+        }
+
+        //so later we can do thing upon property update
+        public void SetProperties(List<AdminObjectProperty> properties)
+        {
+            Properties = properties;
+        }
+    }
+
+    
 }
