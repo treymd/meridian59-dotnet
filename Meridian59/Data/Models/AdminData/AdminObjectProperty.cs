@@ -22,9 +22,19 @@ namespace Meridian59.Data.Models.AdminData
             
         }
 
+        public AdminObjectProperty(string propertyName, string propertyType, string propertyValue)
+        {
+            PropertyName = propertyName;
+            PropertyType = propertyType;
+            PropertyValue = propertyValue;
+        }
+
         #region INotifyPropertyChanged
 
         public event PropertyChangedEventHandler PropertyChanged;
+        private string _propertyName;
+        private string p2;
+        private string p3;
 
         protected void RaisePropertyChanged(PropertyChangedEventArgs e)
         {
