@@ -72,6 +72,12 @@ namespace Meridian59.DebugUI
             }
         }
 
+        private void AdminInfoOnWatchObjectAdded(object sender, AdminWatchObjectEventHandlerArgs args)
+        {
+            ObjectEditor oe = new ObjectEditor(args.AdminObject);
+            oe.Show();
+        }
+
         private ResourceManager resourceManager;
         public ResourceManager ResourceManager
         {
@@ -89,12 +95,6 @@ namespace Meridian59.DebugUI
 
             guildMemberListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
             guildListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
-        }
-
-        private void AdminInfoOnWatchObjectAdded(AdminWatchObjectEventHandlerArgs args)
-        {
-            ObjectEditor oe = new ObjectEditor(args.AdminObject);
-            oe.Show();
         }
 
         public void HandleAdminMessage(AdminMessage Message)
