@@ -1,0 +1,213 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+  
+  <resources 
+    version="10016" 
+    path="../../../../Resources/"
+    preloadrooms="false" 
+    preloadobjects="false" 
+    preloadroomtextures="false"
+    preloadsound="false"
+    preloadmusic="false" />
+  
+  <connections selectedindex="2">
+
+    <connection
+      name="101"
+      host="meridian101.meridian59.com"
+      port="5901"
+      useipv6="false"
+      stringdictionary="rsc0000-101.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+    
+    <connection 
+      name="102" 
+      host="meridian102.meridian59.com" 
+      port="5902"
+      useipv6="false"
+      stringdictionary="rsc0000-101.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+    
+    <connection 
+      name="103" 
+      host="meridian103.openmeridian.org" 
+      port="5903"
+      useipv6="false"
+      stringdictionary="rsc0000-103.rsb" 
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+    
+    <connection 
+      name="104" 
+      host="meridian104.openmeridian.org" 
+      port="5904"
+      useipv6="false"
+      stringdictionary="rsc0000-104.rsb" 
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+
+    <connection
+      name="112"
+      host="arantis.org"
+      port="5912"
+      useipv6="false"
+      stringdictionary="rsc0000-112.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+    
+    <connection
+      name="115"
+      host="proxy03.zyres.net"
+      port="5959"
+      useipv6="false"
+      stringdictionary="rsc0000-115.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+    
+    <connection 
+      name="localhost" 
+      host="127.0.0.1" 
+      port="5959"
+      useipv6="false"
+      stringdictionary="rsc0000-git.rsb" 
+      username="user"
+      password=""
+      character="">
+      <ignorelist />
+    </connection>
+    
+  </connections>
+  <aliases>
+    <alias key="chuckle" value="emote chuckles." />
+    <alias key="giggle" value="emote giggles." />
+    <alias key="laugh" value="emote laughs." />
+  </aliases>
+  <engine>
+    <display value="0" />
+    <resolution value="1280 x 720 @ 32-bit colour" />
+    <windowmode enabled="true" />
+    <windowframe enabled="true" />
+    <vsync enabled="true" />
+    <fsaa value="8" />
+    <nomipmaps value="false" />
+    <texturefiltering value="Anisotropic x16" />
+    <imagebuilder value="GDI" />
+    <bitmapscaling value="Default" />
+    <texturequality value="Default" />
+    <decorationintensity value="20" />
+    <disablenewroomtextures value="false" />
+    <disable3dmodels value="false" />
+    <disablenewsky value="false" />
+    <disableweathereffects value="False" />
+    <weatherparticles value="5000" />
+    <musicvolume value="4.0" />
+    <soundvolume value="10.0" />
+    <disableloopsounds value="false" />
+  </engine>
+  <ui>
+    <layout>
+      <avatar xrel="0.0" xabs="5.0" yrel="0.0" yabs="25.0" wrel="0.0" wabs="266.0" hrel="0.0" habs="140.0" />
+      <target xrel="0.0" xabs="275.0" yrel="0.0" yabs="30.0" wrel="0.0" wabs="256.0" hrel="0.0" habs="92.0" />
+      <minimap xrel="1.0" xabs="-257.0" yrel="0.0" yabs="25.0" wrel="0.0" wabs="256.0" hrel="0.0" habs="256.0" />
+      <chat xrel="0.0" xabs="0.0" yrel="0.5" yabs="0.0" wrel="0.35" wabs="0.0" hrel="0.3" habs="0.0" />
+      <inventory xrel="1.0" xabs="-288.0" yrel="1.0" yabs="-310.0" wrel="0.0" wabs="288.0" hrel="0.0" habs="233.0" />
+      <spells xrel="0.5" xabs="-128.0" yrel="0.5" yabs="-128.0" wrel="0.0" wabs="256.0" hrel="0.0" habs="256.0" />
+      <skills xrel="0.5" xabs="-128.0" yrel="0.5" yabs="-128.0" wrel="0.0" wabs="256.0" hrel="0.0" habs="192.0" />
+      <actions xrel="0.5" xabs="-128.0" yrel="0.5" yabs="-128.0" wrel="0.0" wabs="192.0" hrel="0.0" habs="256.0" />
+      <attributes xrel="0.5" xabs="-144.0" yrel="0.5" yabs="-190.0" wrel="0.0" wabs="288.0" hrel="0.0" habs="380.0" />
+      <mainbuttonsleft xrel="0.5" xabs="-372.0" yrel="1.0" yabs="-47.0" wrel="0.0" wabs="182.0" hrel="0.0" habs="46.0" />
+      <mainbuttonsright xrel="0.5" xabs="190.0" yrel="1.0" yabs="-47.0" wrel="0.0" wabs="182.0" hrel="0.0" habs="46.0" />
+      <actionbuttongrid xrel="0.5" xabs="-193.0" yrel="1.0" yabs="-129.0" wrel="0.0" wabs="385.0" hrel="0.0" habs="128.0" />
+      <onlineplayers xrel="0.5" xabs="-128.0" yrel="0.5" yabs="-192.0" wrel="0.0" wabs="256.0" hrel="0.0" habs="384.0" />
+      <roomobjects xrel="0.5" xabs="-128.0" yrel="0.5" yabs="-192.0" wrel="0.0" wabs="208.0" hrel="0.0" habs="384.0" />
+    </layout>
+  </ui>
+  <input>
+    <mouseaimspeed value="15" />
+    <keyrotatespeed value="25" />
+    <invertmousey value="False" />
+    <keybinding rightclickaction="13">
+      <moveforward key="17" />
+      <movebackward key="31" />
+      <moveleft key="16" />
+      <moveright key="18" />
+      <rotateleft key="30" />
+      <rotateright key="32" />
+      <walk key="42" />
+      <automove key="69" />
+      <nexttarget key="15" />
+      <selftarget key="56" />
+      <open key="49" />
+      <close key="1" />     
+      <action01 key="2" />
+      <action02 key="3" />
+      <action03 key="4" />
+      <action04 key="5" />
+      <action05 key="6" />
+      <action06 key="7" />
+      <action07 key="8" />
+      <action08 key="9" />
+      <action09 key="10" />
+      <action10 key="11" />
+      <action11 key="35" />
+      <action12 key="35" />
+      <action13 key="57" />
+      <action14 key="19" />
+      <action15 key="34" />
+      <action16 key="23" />
+      <action17 key="22" />
+      <action18 key="48" />
+      <action19 key="20" />
+      <action20 key="33" />
+      <action21 key="46" />
+      <action22 key="47" />
+      <action23 key="36" />
+      <action24 key="36" />
+      <action25 key="0" />
+      <action26 key="0" />
+      <action27 key="0" />
+      <action28 key="0" />
+      <action29 key="0" />
+      <action30 key="0" />
+      <action31 key="0" />
+      <action32 key="0" />
+      <action33 key="0" />
+      <action34 key="0" />
+      <action35 key="0" />
+      <action36 key="0" />
+      <action37 key="0" />
+      <action38 key="0" />
+      <action39 key="0" />
+      <action40 key="0" />
+      <action41 key="0" />
+      <action42 key="0" />
+      <action43 key="0" />
+      <action44 key="0" />
+      <action45 key="0" />
+      <action46 key="0" />
+      <action47 key="0" />
+      <action48 key="0" />
+    </keybinding>
+    <actionbuttonsets />
+  </input>
+</configuration>

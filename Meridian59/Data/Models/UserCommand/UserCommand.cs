@@ -66,8 +66,8 @@ namespace Meridian59.Data.Models
         /// <param name="Length">This is required to parse unknown UserCommandGeneric.</param>
         /// <returns>Subclass instance of UserCommand or UserCommandGeneric for unknown ones</returns>
         public static UserCommand ExtractCommand(
-            bool IsOutgoing, 
-            LockingDictionary<uint, string> StringResources, 
+            bool IsOutgoing,
+			StringDictionary StringResources, 
             byte[] Buffer, 
             int StartIndex,
             int Length)
@@ -100,7 +100,11 @@ namespace Meridian59.Data.Models
                 case UserCommandType.Suicide:                                                           // 8
                     returnValue = new UserCommandSuicide(Buffer, StartIndex);
                     break;
-
+#if !VANILLA
+                case UserCommandType.TempSafe:                                                          // 9
+                    returnValue = new UserCommandTempSafe(Buffer, StartIndex);
+                    break;
+#endif
                 case UserCommandType.GuildInfo:                                                         // 11
                     returnValue = new UserCommandGuildInfo(Buffer, StartIndex);
                     break;
@@ -177,6 +181,14 @@ namespace Meridian59.Data.Models
 
                 case UserCommandType.ClaimShield:                                                       // 33
                     returnValue = new UserCommandClaimShield(Buffer, StartIndex);
+                    break;
+#if !VANILLA
+                case UserCommandType.Grouping:                                                          // 34
+                    returnValue = new UserCommandGrouping(Buffer, StartIndex);
+                    break;
+#endif
+                case UserCommandType.Deposit:                                                           // 35
+                    returnValue = new UserCommandDeposit(Buffer, StartIndex);
                     break;
 
                 case UserCommandType.WithDraw:                                                          // 36

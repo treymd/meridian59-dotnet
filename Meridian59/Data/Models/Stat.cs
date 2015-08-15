@@ -251,11 +251,11 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public virtual void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public virtual void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string res_name;
-            
-            StringResources.TryGetValue(resourceID, out res_name);
+			
+			StringResources.TryGetValue(resourceID, out res_name);
             
             if (RaiseChangedEvent)
             {

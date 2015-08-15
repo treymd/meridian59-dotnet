@@ -33,10 +33,10 @@ namespace Meridian59.Bot.Spell
     public class SpellBotClient : BotClient<GameTick, ResourceManager, DataController, SpellBotConfig>
     {
         #region Constants
-        protected const uint STARTUPSLEEP = 5000;
+        protected const double STARTUPSLEEP = 5000.0;
         #endregion
 
-        protected long tickSleepUntil;
+        protected double tickSleepUntil;
         protected BotTask currentTask;
         protected uint imps = 0;
 
@@ -66,13 +66,6 @@ namespace Meridian59.Bot.Spell
         protected override void HandleGameModeMessage(GameModeMessage Message)
         {
             base.HandleGameModeMessage(Message);
-
-            switch ((MessageTypeGameMode)Message.PI)
-            {
-                case MessageTypeGameMode.Message:
-                    HandleMessageMessage((MessageMessage)Message);
-                    break;
-            }
         }
 
         /// <summary>
@@ -216,10 +209,10 @@ namespace Meridian59.Bot.Spell
                     DoSay((BotTaskSay)currentTask);                
             }
 
-            long slp = (tickSleepUntil - GameTick.Current) / Common.GameTick.MSINSECOND;
+            double slp = (tickSleepUntil - GameTick.Current) / (double)Common.GameTick.MSINSECOND;
             
             // draw sleep & imps
-            DrawDynamic("SLP: " + slp.ToString().PadRight(3) + " IMPS: " + imps.ToString().PadRight(3));
+            DrawDynamic("SLP: " + string.Format("{0:N0}", slp).PadRight(3) + " IMPS: " + imps.ToString().PadRight(3));
         }
 
         /// <summary>
@@ -267,6 +260,21 @@ namespace Meridian59.Bot.Spell
         {
             SpellObject spellObject = null;
             StatList spellStat = null;
+            string sureTarget = Task.Target;
+            string sureWhere = Task.Where;
+
+            // handle selftargeting
+            if (sureTarget.ToLower().Equals(SpellBotConfig.XMLVALUE_SELF))
+            {
+                if(Data.AvatarObject == null)
+                {
+                    Log("WARN", "Cant execute task 'cast' " + Task.Name + ". Technical interruption changed the target.");
+                    return;
+                }
+
+                sureTarget = Data.AvatarObject.Name.ToLower();
+                sureWhere = SpellBotConfig.XMLVALUE_ROOM;
+            }
 
             // try to get the spell from the spells
             spellObject = Data.SpellObjects.GetItemByName(Task.Name, false);
@@ -283,11 +291,11 @@ namespace Meridian59.Bot.Spell
 
                 return;
             }
-
-            // handle maxed out spell
-            if (spellStat.SkillPoints == 99)
+           
+            // handle spells above cap
+            if (spellStat.SkillPoints >= Task.Cap)
             {
-                if (Task.OnMax == SpellBotConfig.XMLVALUE_QUIT)
+                if (Task.OnMax.ToLower() == SpellBotConfig.XMLVALUE_QUIT)
                 {
                     // log
                     Log("BOT", "Quitting.. spell " + spellObject.Name + " reached 99%.");
@@ -296,7 +304,7 @@ namespace Meridian59.Bot.Spell
                     IsRunning = false;
                     return;
                 }
-                else if (Task.OnMax == SpellBotConfig.XMLVALUE_SKIP)
+                else if (Task.OnMax.ToLower() == SpellBotConfig.XMLVALUE_SKIP)
                 {
                     // log
                     Log("BOT", "Skipped task 'cast' " + spellObject.Name + " (99%)");
@@ -319,17 +327,17 @@ namespace Meridian59.Bot.Spell
             else if (spellObject.TargetsCount > 0)
             {
                 // marked to cast on roomobject
-                if (Task.Where == SpellBotConfig.XMLVALUE_ROOM)
+                if (sureWhere == SpellBotConfig.XMLVALUE_ROOM)
                 {
                     // try to get the target
                     RoomObject roomObject =
-                        Data.RoomObjects.GetItemByName(Task.Target, false);
+                        Data.RoomObjects.GetItemByName(sureTarget, false);
 
                     // target not found
                     if (roomObject == null)
                     {
                         // log
-                        Log("WARN", "Can't execute task 'cast'. RoomObject " + Task.Target + " not found.");
+                        Log("WARN", "Can't execute task 'cast'. RoomObject " + sureTarget + " not found.");
 
                         return;
                     }
@@ -345,17 +353,17 @@ namespace Meridian59.Bot.Spell
                 }
 
                 // cast on inventory item
-                else if (Task.Where == SpellBotConfig.XMLVALUE_INVENTORY)
+                else if (sureWhere == SpellBotConfig.XMLVALUE_INVENTORY)
                 {
                     // try to get the target
                     InventoryObject inventoryObject =
-                        Data.InventoryObjects.GetItemByName(Task.Target, false);
+                        Data.InventoryObjects.GetItemByName(sureTarget, false);
 
                     // target not found
                     if (inventoryObject == null)
                     {
                         // log
-                        Log("WARN", "Can't execute task 'cast'. Item " + Task.Target + " not found.");
+                        Log("WARN", "Can't execute task 'cast'. Item " + sureTarget + " not found.");
 
                         return;
                     }
@@ -372,7 +380,7 @@ namespace Meridian59.Bot.Spell
                 else
                 {
                     // log
-                    Log("WARN", "Can't execute task 'cast'. " + Task.Where + " is unknown 'where'.");
+                    Log("WARN", "Can't execute task 'cast'. " + sureWhere + " is unknown 'where'.");
                 }
             }
         }

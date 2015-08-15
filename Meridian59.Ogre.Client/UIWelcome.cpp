@@ -17,9 +17,12 @@ namespace Meridian59 { namespace Ogre
 		OgreClient::Singleton->Data->WelcomeInfo->PropertyChanged += 
 			gcnew PropertyChangedEventHandler(OnWelcomeInfoPropertyChanged);
 
+		Window->subscribeEvent(CEGUI::FrameWindow::EventKeyUp, CEGUI::Event::Subscriber(UICallbacks::Welcome::OnWindowKeyUp));
+		Window->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(UICallbacks::Welcome::OnWindowCloseClick));
+
 		// subscribe avatar list selection change
 		Avatars->subscribeEvent(CEGUI::ItemEntry::EventSelectionChanged, CEGUI::Event::Subscriber(UICallbacks::Welcome::OnAvatarSelectionChanged));
-
+		
 		// subscribe selectbutton
 		Select->subscribeEvent(CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(UICallbacks::Welcome::OnSelectClicked));
 		
@@ -98,9 +101,6 @@ namespace Meridian59 { namespace Ogre
 		// set avatarname
 		name->setText(avatarName);
 
-		widget->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		name->setMouseCursor(UI_MOUSECURSOR_TARGET);
-
 		name->subscribeEvent(
 			CEGUI::Window::EventMouseDoubleClick,
 			CEGUI::Event::Subscriber(UICallbacks::Welcome::OnItemDoubleClick));
@@ -117,8 +117,11 @@ namespace Meridian59 { namespace Ogre
 		// when insertItem was used
 		Avatars->notifyScreenAreaChanged(true);
 
-		// update values
-		//CharacterChange(Index);
+		ConnectionInfo^ coninfo = OgreClient::Singleton->Config->SelectedConnectionInfo;
+
+		// preselect the charactername which we last used
+		if (coninfo && info->Characters[Index]->Name == coninfo->Character)
+			widget->setSelected(true);		
 	};
 
 	void ControllerUI::Welcome::CharacterRemove(int Index)
@@ -138,30 +141,34 @@ namespace Meridian59 { namespace Ogre
 		// get selection
 		CEGUI::ItemEntry* selectedItem = listBox->getFirstSelectedItem();
 
-		// active selection required
-		if (selectedItem != NULL)
+		if (!selectedItem)
+			return true;
+
+		int index = (int)listBox->getItemIndex(selectedItem);
+
+		// show creation wizard
+		if (welcomeInfo->Characters[index]->IsEmptySlot)
 		{
-			int index = (int)listBox->getItemIndex(selectedItem);
-
-			// show creation wizard
-			if (welcomeInfo->Characters[index]->IsEmptySlot)
-			{
-				// request avatar creation data
-				OgreClient::Singleton->SendSystemMessageSendCharInfo(
-					welcomeInfo->Characters[index]->ID);
+			// request avatar creation data
+			OgreClient::Singleton->SendSystemMessageSendCharInfo(
+				welcomeInfo->Characters[index]->ID);
 		
-				// set UI mode to avatar creation
-				OgreClient::Singleton->Data->UIMode = UIMode::AvatarCreation;
-			}
-
-			// login selected avatar
-			else
-			{
-				OgreClient::Singleton->SendUseCharacterMessage(index, true);
-				OgreClient::Singleton->SendUserCommandSafetyMessage(true);
-			}
+			// set UI mode to avatar creation
+			OgreClient::Singleton->Data->UIMode = UIMode::AvatarCreation;
 		}
 
+		// login selected avatar
+		else
+		{
+			// save last logged in avatarname in config
+			OgreClient::Singleton->Config->SelectedConnectionInfo->Character =
+				welcomeInfo->Characters[index]->Name;
+
+			// log it in
+			OgreClient::Singleton->SendUseCharacterMessage(index, true);
+			OgreClient::Singleton->SendUserCommandSafetyMessage(true);
+		}
+		
 		return true;
 	};
 
@@ -194,6 +201,11 @@ namespace Meridian59 { namespace Ogre
 			// login selected avatar
 			else
 			{
+				// save last logged in avatarname in config
+				OgreClient::Singleton->Config->SelectedConnectionInfo->Character =
+					welcomeInfo->Characters[index]->Name;
+
+				// log it in
 				OgreClient::Singleton->SendUseCharacterMessage(index, true);
 				OgreClient::Singleton->SendUserCommandSafetyMessage(true);
 			}
@@ -227,6 +239,61 @@ namespace Meridian59 { namespace Ogre
 		else
 		{
 			selectButton->setEnabled(false);
+		}
+
+		return true;
+	};
+	
+	bool UICallbacks::Welcome::OnWindowCloseClick(const CEGUI::EventArgs& e)
+	{
+		OgreClient::Singleton->Disconnect();
+		
+		return true;
+	};
+
+	bool UICallbacks::Welcome::OnWindowKeyUp(const CEGUI::EventArgs& e)
+	{
+		const CEGUI::KeyEventArgs& args = (const CEGUI::KeyEventArgs&)e;
+		const CEGUI::ItemListbox* listBox = ControllerUI::Welcome::Avatars;
+		WelcomeInfo^ welcomeInfo = OgreClient::Singleton->Data->WelcomeInfo;
+
+		if (args.scancode == ::CEGUI::Key::Scan::Escape)
+		{
+			OgreClient::Singleton->Disconnect();
+		}
+		else if (args.scancode == ::CEGUI::Key::Scan::Return ||
+			args.scancode == ::CEGUI::Key::Scan::NumpadEnter)
+		{
+			// get selection
+			CEGUI::ItemEntry* selectedItem = listBox->getFirstSelectedItem();
+
+			if (!selectedItem)
+				return true;
+
+			int index = (int)listBox->getItemIndex(selectedItem);
+
+			// show creation wizard
+			if (welcomeInfo->Characters[index]->IsEmptySlot)
+			{
+				// request avatar creation data
+				OgreClient::Singleton->SendSystemMessageSendCharInfo(
+					welcomeInfo->Characters[index]->ID);
+
+				// set UI mode to avatar creation
+				OgreClient::Singleton->Data->UIMode = UIMode::AvatarCreation;
+			}
+
+			// login selected avatar
+			else
+			{
+				// save last logged in avatarname in config
+				OgreClient::Singleton->Config->SelectedConnectionInfo->Character =
+					welcomeInfo->Characters[index]->Name;
+
+				// log it in
+				OgreClient::Singleton->SendUseCharacterMessage(index, true);
+				OgreClient::Singleton->SendUserCommandSafetyMessage(true);
+			}
 		}
 
 		return true;

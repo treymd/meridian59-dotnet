@@ -105,7 +105,9 @@ namespace Meridian59.Protocol.Enums
         ReqBuy              = 124,
         ReqBuyItems         = 125,
         ChangeDescription   = 126,
-
+#if !VANILLA
+        ReqInventoryMove    = 127,
+#endif
         Player              = 130,
         Stat                = 131,
         StatGroup           = 132,
@@ -131,8 +133,13 @@ namespace Meridian59.Protocol.Enums
         AddBgOverlay        = 152,
         RemoveBgOverlay     = 153,
         ChangeBgOverlay     = 154,
-        UserCommand         = 155,   
-
+        UserCommand         = 155,
+#if !VANILLA
+        ReqStatChange       = 156,
+        ChangedStats        = 157,
+        //ChangedStatsOk      = 158,    // unused so far
+        //ChangedStatsNotOk   = 159,    // unused so far
+#endif
         PasswordOK          = 160,
         PasswordNotOK       = 161,
         Admin               = 162,

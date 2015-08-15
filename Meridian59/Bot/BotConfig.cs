@@ -29,33 +29,17 @@ namespace Meridian59.Bot
     public abstract class BotConfig : Config
     {
         #region Constants
-        protected const string XMLTAG_CONNECTION            = "connection";
         protected const string XMLTAG_BOT                   = "bot";
         protected const string XMLTAG_ADMINS                = "admins";
         protected const string XMLTAG_ITEM                  = "item";
-        protected const string XMLATTRIB_HOST               = "host";
-        protected const string XMLATTRIB_PORT               = "port";
-        protected const string XMLATTRIB_RSBFILE            = "rsbfile";
-        protected const string XMLATTRIB_USERNAME           = "username";
-        protected const string XMLATTRIB_PASSWORD           = "password";
-        protected const string XMLATTRIB_CHARACTER          = "character";
         protected const string XMLATTRIB_MAJORVERSION       = "majorversion";
         protected const string XMLATTRIB_MINORVERSION       = "minorversion";
-        protected const string XMLATTRIB_RESOURCEVERSION    = "resourceversion";
         protected const string XMLATTRIB_LOGFILE            = "logfile";
-        protected const string XMLATTRIB_NAME               = "name";
         #endregion
 
         #region Properties
-        public string Host { get; protected set; }
-        public ushort Port { get; protected set; }
-        public string RSBFile { get; protected set; }
-        public string Username { get; protected set; }
-        public string Password { get; protected set; }
-        public string Character { get; protected set; }
         public byte MajorVersion { get; protected set; }
         public byte MinorVersion { get; protected set; }
-        public uint ResourceVersion { get; protected set; }
         public string LogFile { get; protected set; }
         public List<String> Admins { get; protected set; }
         #endregion
@@ -112,21 +96,11 @@ namespace Meridian59.Bot
         public override void ReadXml(XmlReader Reader)
         {
             base.ReadXml(Reader);
-
-            // rootnode
-            Reader.ReadToFollowing(XMLTAG_CONFIGURATION);
-
+           
             // connection
             Reader.ReadToFollowing(XMLTAG_CONNECTION);
-            Host = Reader[XMLATTRIB_HOST];
-            Port = Convert.ToUInt16(Reader[XMLATTRIB_PORT]);
-            RSBFile = Reader[XMLATTRIB_RSBFILE];
-            Username = Reader[XMLATTRIB_USERNAME];
-            Password = Reader[XMLATTRIB_PASSWORD];
-            Character = Reader[XMLATTRIB_CHARACTER];
             MajorVersion = Convert.ToByte(Reader[XMLATTRIB_MAJORVERSION]);
             MinorVersion = Convert.ToByte(Reader[XMLATTRIB_MINORVERSION]);
-            ResourceVersion = Convert.ToUInt32(Reader[XMLATTRIB_RESOURCEVERSION]);
             LogFile = Reader[XMLATTRIB_LOGFILE];
 
             // admins list

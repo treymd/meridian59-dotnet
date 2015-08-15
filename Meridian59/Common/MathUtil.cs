@@ -28,6 +28,35 @@ using Real = System.Single;
 namespace Meridian59.Common
 {
     /// <summary>
+    /// Different cases two finite line segments can intersect.
+    /// </summary>
+    /// <remarks>
+    /// NoIntersection: No intersection or boundary point
+    /// OneIntersection: Exactly one intersection
+    /// OneBoundaryPoint: Exactly one boundary point
+    /// FullyCoincide: Finite lines are exactly equal
+    /// PartiallyCoincide: Finite lines partially overlap
+    /// </remarks>
+    public enum LineLineIntersectionType
+    {
+        NoIntersection, OneIntersection, OneBoundaryPoint, FullyCoincide, PartiallyCoincide
+    }
+
+    /// <summary>
+    /// Different cases a finite line segment can intersect with an infinite line.
+    /// </summary>
+    /// <remarks>
+    /// NoIntersection: No intersection or boundary point
+    /// OneIntersection: Exactly one intersection
+    /// OneBoundaryPoint: Exactly one boundary point
+    /// FullyCoincide: Finite line segment is included in infinite line
+    /// </remarks>
+    public enum LineInfiniteLineIntersectionType
+    {
+        NoIntersection, OneIntersection, OneBoundaryPoint, FullyCoincide
+    }
+
+    /// <summary>
     /// Contains some static math util functions
     /// </summary>
     public static class MathUtil
@@ -129,6 +158,66 @@ namespace Meridian59.Common
         }
 
         /// <summary>
+        /// Returns the Greatest Common Divisor
+        /// </summary>
+        /// <param name="a">Number a</param>
+        /// <param name="b">Number b</param>
+        /// <returns></returns>
+        public static long GCD(long a, long b)
+        {
+            long tmp;
+            while (b != 0)
+            {
+                tmp = b;
+                b = a % b;
+                a = tmp;
+            }
+
+            return a;
+        }
+
+        /// <summary>
+        /// Returns the Greatest Common Divisor
+        /// </summary>
+        /// <param name="a">Number a</param>
+        /// <param name="b">Number b</param>
+        /// <returns></returns>
+        public static int GCD(int a, int b)
+        {
+            int tmp;
+            while (b != 0)
+            {
+                tmp = b;
+                b = a % b;
+                a = tmp;
+            }
+
+            return a;
+        }
+
+        /// <summary>
+        /// Returns the Least Common Multiple
+        /// </summary>
+        /// <param name="a">Number a</param>
+        /// <param name="b">Number b</param>
+        /// <returns></returns>
+        public static long LCM(long a, long b)
+        {
+            return (a * b) / GCD(a, b);
+        }
+
+        /// <summary>
+        /// Returns the Least Common Multiple
+        /// </summary>
+        /// <param name="a">Number a</param>
+        /// <param name="b">Number b</param>
+        /// <returns></returns>
+        public static int LCM(int a, int b)
+        {
+            return (a * b) / GCD(a, b);
+        }
+
+        /// <summary>
         /// Returns a random point within a 2D triangle.
         /// </summary>
         /// <remarks>
@@ -174,6 +263,82 @@ namespace Meridian59.Common
             return 0.5f * AB.CrossProduct(AC);
         }
 
+        /// <summary>
+        /// Checks a finite line segment for intersection with infinite line.
+        /// </summary>
+        /// <param name="P1">First point of finite line segment</param>
+        /// <param name="P2">Second point of finite line segment</param>
+        /// <param name="Q1">First point in infinte line</param>
+        /// <param name="Q2">Second point in infinite line</param>
+        /// <param name="Intersect"></param>
+        /// <returns></returns>
+        public static LineInfiniteLineIntersectionType IntersectLineInfiniteLine(V2 P1, V2 P2, V2 Q1, V2 Q2, out V2 Intersect)
+        {
+            Intersect.X = 0.0f;
+            Intersect.Y = 0.0f;
+
+            /*****************************************************************/
+
+            int sideP1 = P1.GetSide(Q1, Q2);
+            int sideP2 = P2.GetSide(Q1, Q2);
+
+            // case (a): no intersection
+            // both finite line endpoints are on the same side of the infinite line
+            if (sideP1 == sideP2 && sideP1 != 0)
+            {
+                return LineInfiniteLineIntersectionType.NoIntersection;
+            }
+
+            // case (b): real intersection (not only touch)
+            // both finite line endpoints are on different sides
+            if (sideP1 != sideP2 && sideP1 != 0 && sideP2 != 0)
+            {
+                // variant 2
+                Real denom = (P1.X - P2.X) * (Q1.Y - Q2.Y) - (P1.Y - P2.Y) * (Q1.X - Q2.X);                
+                Real num;
+                
+                num = (P1.X * P2.Y - P1.Y * P2.X) * (Q1.X - Q2.X) - (P1.X - P2.X) * (Q1.X * Q2.Y - Q1.Y * Q2.X);                
+                Intersect.X = num / denom;
+
+                num = (P1.X * P2.Y - P1.Y * P2.X) * (Q1.Y - Q2.Y) - (P1.Y - P2.Y) * (Q1.X * Q2.Y - Q1.Y * Q2.X);
+                Intersect.Y = num / denom;
+
+                return LineInfiniteLineIntersectionType.OneIntersection;
+            }
+
+            // case (c): fully coincide
+            // both finite line endpoints are on the infinite line
+            if (sideP1 == 0 && sideP2 == 0)
+            {
+                Intersect.X = P1.X;
+                Intersect.Y = P1.Y;
+
+                return LineInfiniteLineIntersectionType.FullyCoincide;
+            }
+           
+            // case (d):
+            // finite line endpoint P1 touches infinite line
+            if (sideP1 != sideP2 && sideP1 == 0)
+            {
+                Intersect.X = P1.X;
+                Intersect.Y = P1.Y;
+
+                return LineInfiniteLineIntersectionType.OneBoundaryPoint;
+            }
+
+            // case (d):
+            // finite line endpoint P2 touches infinite line
+            if (sideP1 != sideP2 && sideP2 == 0)
+            {
+                Intersect.X = P2.X;
+                Intersect.Y = P2.Y;
+
+                return LineInfiniteLineIntersectionType.OneBoundaryPoint;
+            }
+
+            // huh? something wrong?
+            throw new Exception("Unknown intersection");
+        }
 
         /// <summary>
         /// Checks two finite line segments for intersection.
@@ -183,34 +348,137 @@ namespace Meridian59.Common
         /// <param name="Q1">First point of second line segment</param>
         /// <param name="Q2">Second point of second line segment</param>
         /// <param name="Intersect">Intersection point</param>
-        /// <returns>True if interesction, false if none.</returns>
-        public static bool IntersectLineLine(V2 P1, V2 P2, V2 Q1, V2 Q2, out V2 Intersect)
+        /// <returns>LineLineIntersectionType</returns>
+        public static LineLineIntersectionType IntersectLineLine(V2 P1, V2 P2, V2 Q1, V2 Q2, out V2 Intersect)
         {
             Intersect.X = 0.0f;
             Intersect.Y = 0.0f;
+
+            /*****************************************************************/
+
+            // fully coincide, lines are equal
+            if ((P1 == Q1 && P2 == Q2) || (P1 == Q2 && P2 == Q1))
+            {
+                // use one point as intersection
+                Intersect.X = P1.X;
+                Intersect.Y = P1.Y;
+
+                return LineLineIntersectionType.FullyCoincide;
+            }
+
+            /*****************************************************************/
 
             V2 b = P2 - P1;
             V2 d = Q2 - Q1;
             Real bDotDPerp = b.X * d.Y - b.Y * d.X;
 
-            // if b dot d == 0, it means the lines are parallel/collapse
-            // so have infinite intersection points or none
-            if (bDotDPerp == 0)
-                return false;
+            /******************************************************************
+             *                 SPECIAL CASE: b dot d == 0                     *
+             ******************************************************************/
 
+            // three subcases:
+            // (a) no intersect: parallel or on same infinite line but don't overlap
+            // (b) partially coincide with many intersections
+            // (c) touch each other at one endpoint
+            if (bDotDPerp == 0.0f)
+            {
+                bool isP1onQ1Q2 = P1.IsOnLineSegment(Q1, Q2);
+                bool isP2onQ1Q2 = P2.IsOnLineSegment(Q1, Q2);
+                bool isQ1onP1P2 = Q1.IsOnLineSegment(P1, P2);
+                bool isQ2onP1P2 = Q2.IsOnLineSegment(P1, P2);
+
+                // subcase (a): p1p2 and q1q2 don't share a point
+                if (!isP1onQ1Q2 && !isP2onQ1Q2 && !isQ1onP1P2 && !isQ2onP1P2)
+                {
+                    return LineLineIntersectionType.NoIntersection;
+                }
+
+                // subcase (b): P1P2 fully inside Q1Q2
+                if (isP1onQ1Q2 && isP2onQ1Q2)
+                {
+                    // use p1 for intersection
+                    Intersect.X = P1.X;
+                    Intersect.Y = P1.Y;
+
+                    return LineLineIntersectionType.PartiallyCoincide;
+                }
+
+                // subcase (b): Q1Q2 fully inside P1P2
+                if (isQ1onP1P2 && isQ2onP1P2)
+                {
+                    // use p1 for intersection
+                    Intersect.X = Q1.X;
+                    Intersect.Y = Q1.Y;
+
+                    return LineLineIntersectionType.PartiallyCoincide;
+                }
+
+                // subcase (c): touch at P1
+                if (isP1onQ1Q2 && !isP2onQ1Q2)
+                {
+                    // use p1 for intersection
+                    Intersect.X = P1.X;
+                    Intersect.Y = P1.Y;
+
+                    return LineLineIntersectionType.OneBoundaryPoint;
+                }
+
+                // subcase (c): touch at P2
+                if (!isP1onQ1Q2 && isP2onQ1Q2)
+                {
+                    // use p1 for intersection
+                    Intersect.X = P2.X;
+                    Intersect.Y = P2.Y;
+
+                    return LineLineIntersectionType.OneBoundaryPoint;
+                }
+
+                // subcase (c): touch at Q1
+                if (isQ1onP1P2 && !isQ2onP1P2)
+                {
+                    // use p1 for intersection
+                    Intersect.X = Q1.X;
+                    Intersect.Y = Q1.Y;
+
+                    return LineLineIntersectionType.OneBoundaryPoint;
+                }
+
+                // subcase (c): touch at Q2
+                if (!isQ1onP1P2 && isQ2onP1P2)
+                {
+                    // use p1 for intersection
+                    Intersect.X = Q2.X;
+                    Intersect.Y = Q2.Y;
+
+                    return LineLineIntersectionType.OneBoundaryPoint;
+                }
+            }
+
+            /******************************************************************
+             *             DEFAULT CASE: INFINITE LINES CROSS                 *
+             ******************************************************************/
+           
             V2 c = Q1 - P1;
             Real t = (c.X * d.Y - c.Y * d.X) / bDotDPerp;
             if (t < 0.0f || t > 1.0f)
-                return false;
+                return LineLineIntersectionType.NoIntersection;
 
             Real u = (c.X * b.Y - c.Y * b.X) / bDotDPerp;
             if (u < 0.0f || u > 1.0f)
-                return false;
+                return LineLineIntersectionType.NoIntersection;
+
+            // -- finite line segments cross or boundary point! --
 
             b.Scale(t);
             Intersect = P1 + b;
 
-            return true;
+            // if the intersection point is also the endpoint of
+            // one of the finite lines, it's a boundary point
+            if (Intersect == P1 || Intersect == P2 || Intersect == Q1 || Intersect == Q2)          
+                return LineLineIntersectionType.OneBoundaryPoint;
+            
+            // true intersection
+            return LineLineIntersectionType.OneIntersection;
         }
 
         /// <summary>
@@ -262,6 +530,22 @@ namespace Meridian59.Common
             }
 
             return intersects;
+        }
+
+        /// <summary>
+        /// Converts radian angle to V2 direction
+        /// </summary>
+        /// <param name="Angle">Direction in angle 0-2pi</param>
+        /// <returns>Direction vector with length 1</returns>
+        public static V2 GetDirectionForRadian(Real Angle)
+        {
+            // start with unitx vector length 1
+            V2 direction = V2.UNITX;
+
+            // rotate by given angle
+            direction.Rotate(Angle);
+
+            return direction;
         }
 
         /// <summary>

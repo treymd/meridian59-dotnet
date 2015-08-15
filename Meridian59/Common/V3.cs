@@ -66,6 +66,21 @@ namespace Meridian59.Common
         public Real Z;
 
         /// <summary>
+        /// X as a property
+        /// </summary>
+        public Real XProp { get { return X; } set { X = value; } }
+
+        /// <summary>
+        /// Y as a property
+        /// </summary>
+        public Real YProp { get { return Y; } set { Y = value; } }
+
+        /// <summary>
+        /// Z as a property
+        /// </summary>
+        public Real ZProp { get { return Z; } set { Z = value; } }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="X"></param>
@@ -146,6 +161,28 @@ namespace Meridian59.Common
         public static V3 operator *(Real scalar, V3 v1)
         {
             return new V3(v1.X * scalar, v1.Y * scalar, v1.Z * scalar);
+        }
+
+        /// <summary>
+        /// Implemented operator
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static bool operator ==(V3 v1, V3 v2)
+        {
+            return v1.Equals(v2);
+        }
+
+        /// <summary>
+        /// Implemented operator
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static bool operator !=(V3 v1, V3 v2)
+        {
+            return !v1.Equals(v2);
         }
         #endregion
 

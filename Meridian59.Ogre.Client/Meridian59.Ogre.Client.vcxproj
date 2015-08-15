@@ -20,8 +20,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{96EEE7B3-2425-4686-8DC3-44405E00641D}</ProjectGuid>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
     <Keyword>ManagedCProj</Keyword>
     <RootNamespace>Meridian59OgreClient</RootNamespace>
   </PropertyGroup>
@@ -29,30 +30,32 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CLRSupport>true</CLRSupport>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CLRSupport>true</CLRSupport>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CLRSupport>true</CLRSupport>
     <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120_xp</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CLRSupport>true</CLRSupport>
     <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -74,21 +77,25 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>bin\x86\Debug\</OutDir>
     <IntDir>obj\x86\Debug\</IntDir>
+    <LinkKeyFile>..\Meridian59\Meridian59.snk</LinkKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>bin\x64\Debug\</OutDir>
     <IntDir>obj\x64\Debug\</IntDir>
+    <LinkKeyFile>..\Meridian59\Meridian59.snk</LinkKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>bin\x86\Release\</OutDir>
     <IntDir>obj\x86\Release\</IntDir>
+    <LinkKeyFile>..\Meridian59\Meridian59.snk</LinkKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>bin\x64\Release\</OutDir>
     <IntDir>obj\x64\Release\</IntDir>
+    <LinkKeyFile>..\Meridian59\Meridian59.snk</LinkKeyFile>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -102,13 +109,14 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cg.lib;irrklang.lib;boost_d.lib;ogremain_d.lib;ogreterrain_d.lib;ogreparticlefx_d.lib;ogrecg_d.lib;ogreoctree_d.lib;ogred3d9_d.lib;particleuniverse_d.lib;particleuniverse2_d.lib;ois_d.lib;zlib_d.lib;zziplib_d.lib;freeimage_d.lib;freetype_d.lib;LibTIFF4_d.lib;LibJPEG_d.lib;LibOpenJPEG_d.lib;LibPNG_d.lib;LibRaw_d.lib;OpenEXR_d.lib;pcre_d.lib;d3d9.lib;d3dx9d.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase_d.lib;CEGUICommonDialogs_d.lib;CEGUICoreWindowRendererSet_d.lib;CEGUIOgreRenderer_d.lib;CEGUIRapidXMLParser_d.lib;CEGUISTBImageCodec_d.lib;caelum_d.lib;dbghelp.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>irrklang.lib;boost_d.lib;ogremain_d.lib;ogreterrain_d.lib;ogreoctree_d.lib;ogred3d9_d.lib;particleuniverse_d.lib;particleuniverse2_d.lib;ois_d.lib;zlib_d.lib;zziplib_d.lib;freeimage_d.lib;freetype_d.lib;LibTIFF4_d.lib;LibJPEG_d.lib;LibOpenJPEG_d.lib;LibPNG_d.lib;LibRaw_d.lib;OpenEXR_d.lib;pcre_d.lib;d3d9.lib;d3dx9d.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase_d.lib;CEGUICommonDialogs_d.lib;CEGUICoreWindowRendererSet_d.lib;CEGUIOgreRenderer_d.lib;CEGUIRapidXMLParser_d.lib;CEGUISTBImageCodec_d.lib;caelum_d.lib;dbghelp.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>..\Engine\lib\x86</AdditionalLibraryDirectories>
       <Version>
       </Version>
       <LargeAddressAware>true</LargeAddressAware>
       <CLRThreadAttribute>STAThreadingAttribute</CLRThreadAttribute>
+      <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /E /R /Y $(ProjectDir)\..\Engine\dll\x86\* $(TargetDir)</Command>
@@ -126,7 +134,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cg.lib;irrklang.lib;boost_d.lib;ogremain_d.lib;ogreterrain_d.lib;ogreparticlefx_d.lib;ogrecg_d.lib;ogreoctree_d.lib;ogred3d9_d.lib;particleuniverse_d.lib;particleuniverse2_d.lib;ois_d.lib;zlib_d.lib;zziplib_d.lib;freeimage_d.lib;freetype_d.lib;LibTIFF4_d.lib;LibJPEG_d.lib;LibOpenJPEG_d.lib;LibPNG_d.lib;LibRaw_d.lib;OpenEXR_d.lib;pcre_d.lib;d3d9.lib;d3dx9d.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase_d.lib;CEGUICommonDialogs_d.lib;CEGUICoreWindowRendererSet_d.lib;CEGUIOgreRenderer_d.lib;CEGUIRapidXMLParser_d.lib;CEGUISTBImageCodec_d.lib;caelum_d.lib;dbghelp.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>irrklang.lib;boost_d.lib;ogremain_d.lib;ogreterrain_d.lib;ogreoctree_d.lib;ogred3d9_d.lib;particleuniverse_d.lib;particleuniverse2_d.lib;ois_d.lib;zlib_d.lib;zziplib_d.lib;freeimage_d.lib;freetype_d.lib;LibTIFF4_d.lib;LibJPEG_d.lib;LibOpenJPEG_d.lib;LibPNG_d.lib;LibRaw_d.lib;OpenEXR_d.lib;pcre_d.lib;d3d9.lib;d3dx9d.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase_d.lib;CEGUICommonDialogs_d.lib;CEGUICoreWindowRendererSet_d.lib;CEGUIOgreRenderer_d.lib;CEGUIRapidXMLParser_d.lib;CEGUISTBImageCodec_d.lib;caelum_d.lib;dbghelp.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>..\Engine\lib\x64</AdditionalLibraryDirectories>
       <Version>
@@ -155,10 +163,14 @@
       <AdditionalOptions>-Zm328</AdditionalOptions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cg.lib;irrklang.lib;boost.lib;ogremain.lib;ogreterrain.lib;ogreparticlefx.lib;ogrecg.lib;ogreoctree.lib;ogred3d9.lib;particleuniverse.lib;particleuniverse2.lib;ois.lib;zlib.lib;zziplib.lib;freeimage.lib;freetype.lib;LibTIFF4.lib;LibJPEG.lib;LibOpenJPEG.lib;LibPNG.lib;LibRaw.lib;OpenEXR.lib;pcre.lib;d3d9.lib;d3dx9.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase.lib;CEGUICommonDialogs.lib;CEGUICoreWindowRendererSet.lib;CEGUIOgreRenderer.lib;CEGUIRapidXMLParser.lib;CEGUISTBImageCodec.lib;caelum.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>irrklang.lib;boost.lib;ogremain.lib;ogreterrain.lib;ogreoctree.lib;ogred3d9.lib;particleuniverse.lib;particleuniverse2.lib;ois.lib;zlib.lib;zziplib.lib;freeimage.lib;freetype.lib;LibTIFF4.lib;LibJPEG.lib;LibOpenJPEG.lib;LibPNG.lib;LibRaw.lib;OpenEXR.lib;pcre.lib;d3d9.lib;d3dx9.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase.lib;CEGUICommonDialogs.lib;CEGUICoreWindowRendererSet.lib;CEGUIOgreRenderer.lib;CEGUIRapidXMLParser.lib;CEGUISTBImageCodec.lib;caelum.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>..\Engine\lib\x86</AdditionalLibraryDirectories>
       <Version>
@@ -166,6 +178,9 @@
       <LargeAddressAware>true</LargeAddressAware>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <CLRThreadAttribute>STAThreadingAttribute</CLRThreadAttribute>
+      <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /E /R /Y $(ProjectDir)\..\Engine\dll\x86\* $(TargetDir)</Command>
@@ -187,10 +202,11 @@
       <AdditionalOptions>-Zm336</AdditionalOptions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <StringPooling>true</StringPooling>
+      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>cg.lib;irrklang.lib;boost.lib;ogremain.lib;ogreterrain.lib;ogreparticlefx.lib;ogrecg.lib;ogreoctree.lib;ogred3d9.lib;particleuniverse.lib;particleuniverse2.lib;ois.lib;zlib.lib;zziplib.lib;freeimage.lib;freetype.lib;LibTIFF4.lib;LibJPEG.lib;LibOpenJPEG.lib;LibPNG.lib;LibRaw.lib;OpenEXR.lib;pcre.lib;d3d9.lib;d3dx9.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase.lib;CEGUICommonDialogs.lib;CEGUICoreWindowRendererSet.lib;CEGUIOgreRenderer.lib;CEGUIRapidXMLParser.lib;CEGUISTBImageCodec.lib;caelum.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalDependencies>irrklang.lib;boost.lib;ogremain.lib;ogreterrain.lib;ogreoctree.lib;ogred3d9.lib;particleuniverse.lib;particleuniverse2.lib;ois.lib;zlib.lib;zziplib.lib;freeimage.lib;freetype.lib;LibTIFF4.lib;LibJPEG.lib;LibOpenJPEG.lib;LibPNG.lib;LibRaw.lib;OpenEXR.lib;pcre.lib;d3d9.lib;d3dx9.lib;dinput8.lib;dxerr.lib;dxguid.lib;ddraw.lib;CEGUIBase.lib;CEGUICommonDialogs.lib;CEGUICoreWindowRendererSet.lib;CEGUIOgreRenderer.lib;CEGUIRapidXMLParser.lib;CEGUISTBImageCodec.lib;caelum.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>..\Engine\lib\x64</AdditionalLibraryDirectories>
       <Version>
@@ -199,6 +215,8 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <CLRThreadAttribute>STAThreadingAttribute</CLRThreadAttribute>
       <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /E /R /Y $(ProjectDir)\..\Engine\dll\x64\* $(TargetDir)</Command>
@@ -226,6 +244,7 @@
     <ClInclude Include="MiniMapCEGUI.h" />
     <ClInclude Include="Model3DInfo.h" />
     <ClInclude Include="OgreClient.h" />
+    <ClInclude Include="OgreClientConfig.h" />
     <ClInclude Include="OgreListeners.h" />
     <ClInclude Include="OISKeyBinding.h" />
     <ClInclude Include="OISListeners.h" />
@@ -240,7 +259,7 @@
     <ClInclude Include="ResourceManagerOgre.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="StringConvert.h" />
-    <ClInclude Include="StringDefines.h" />
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="Util.h" />
     <ClInclude Include="XmlReaderExtensions.h" />
   </ItemGroup>
@@ -260,6 +279,7 @@
     <ClCompile Include="ImageComposerOgre.cpp" />
     <ClCompile Include="MiniMapCEGUI.cpp" />
     <ClCompile Include="OgreClient.cpp" />
+    <ClCompile Include="OgreClientConfig.cpp" />
     <ClCompile Include="OgreListeners.cpp" />
     <ClCompile Include="OISKeyBinding.cpp" />
     <ClCompile Include="OISListeners.cpp" />
@@ -288,6 +308,7 @@
     <ClCompile Include="UIGuildCreate.cpp" />
     <ClCompile Include="UIInventory.cpp" />
     <ClCompile Include="UILoadingBar.cpp" />
+    <ClCompile Include="UILogin.cpp" />
     <ClCompile Include="UIMail.cpp" />
     <ClCompile Include="UIMailCompose.cpp" />
     <ClCompile Include="UIMainButtonsLeft.cpp" />
@@ -298,8 +319,10 @@
     <ClCompile Include="UIObjectContents.cpp" />
     <ClCompile Include="UIObjectDetails.cpp" />
     <ClCompile Include="UIOnlinePlayers.cpp" />
+    <ClCompile Include="UIOptions.cpp" />
     <ClCompile Include="UIPlayerDetails.cpp" />
     <ClCompile Include="UIPlayerOverlays.cpp" />
+    <ClCompile Include="UIQuests.cpp" />
     <ClCompile Include="UIRoomEnchantments.cpp" />
     <ClCompile Include="UIRoomObjects.cpp" />
     <ClCompile Include="UISkills.cpp" />
@@ -315,18 +338,21 @@
     <Image Include="glow.bmp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="README.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Meridian59.DebugUI\Meridian59.DebugUI.csproj">
       <Project>{c8938199-ab12-4a43-aab0-c8f7043e46e9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Meridian59.Launcher\Meridian59.Launcher.csproj">
-      <Project>{19cb4098-ce21-4c84-9613-a8f7f7fe7983}</Project>
     </ProjectReference>
     <ProjectReference Include="..\Meridian59\Meridian59.csproj">
       <Project>{e8223f3f-3f18-4f4c-9a8f-d9102b067be3}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="configuration.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="configuration.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

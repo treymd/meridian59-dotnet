@@ -93,7 +93,7 @@ namespace Meridian59.Bot
             Data.InventoryObjects.ListChanged += OnInventoryObjectsListChanged;
             Data.AvatarCondition.ListChanged += OnAvatarConditionListChanged;
             Data.RoomInformation.PropertyChanged += OnRoomInformationPropertyChanged;
-            Data.PropertyChanged += OnDataControllerPropertyChanged;
+            Data.PropertyChanged += OnDataControllerPropertyChanged;          
         }
 
         /// <summary>
@@ -205,6 +205,8 @@ namespace Meridian59.Bot
         /// </summary>
         public override void Init()
         {
+            base.Init();
+
             if (!IsService)
             {
                 Console.CursorVisible = false;
@@ -228,28 +230,14 @@ namespace Meridian59.Bot
                 catch (Exception) { }
             }
 
-            // load legacy resources before connecting
-            if (!ResourceManager.Initialized)
+            // connect to selected connection/server
+            if (Config.SelectedConnectionInfo != null)
             {
-                // initialize the resourcemanagerconfig
-                ResourceManagerConfig config = new ResourceManagerConfig(
-                    Config.ResourceVersion,
-                    "./" + Config.RSBFile,
-                    "./",
-                    "./",
-                    "./",
-                    "./",
-                    "./",
-                    "./");
+                Log("SYS", "Connecting to " + Config.SelectedConnectionInfo.Host + ":" + 
+                    Config.SelectedConnectionInfo.Port);
 
-                // init the legacy resources
-                ResourceManager.InitConfig(config);
+                Connect();
             }
-
-            Log("SYS", "Connecting to " + Config.Host + ":" + Config.Port);
-
-            // start connect to server
-            ServerConnection.Connect(Config.Host, Config.Port);
         }
 
         /// <summary>
@@ -278,10 +266,6 @@ namespace Meridian59.Bot
             {
                 case MessageTypeGameMode.Player:
                     HandlePlayerMessage((PlayerMessage)Message);
-                    break;
-
-                case MessageTypeGameMode.Said:
-                    HandleSaidMessage((SaidMessage)Message);
                     break;
 
                 case MessageTypeGameMode.Offer:
@@ -322,7 +306,8 @@ namespace Meridian59.Bot
         protected override void HandleGetLoginMessage(GetLoginMessage Message)
         {
             // answer with our account credentials
-            SendLoginMessage(Config.Username, Config.Password);
+            if (Config.SelectedConnectionInfo != null)
+                SendLoginMessage(Config.SelectedConnectionInfo.Username, Config.SelectedConnectionInfo.Password);
         }
 
         /// <summary>
@@ -385,16 +370,19 @@ namespace Meridian59.Bot
         {
             bool found = false;
 
-            // try to login the character which is defined in config
-            foreach (CharSelectItem character in Message.WelcomeInfo.Characters)
+            if (Config.SelectedConnectionInfo != null)
             {
-                if (character.Name.ToLower() == Config.Character.ToLower())
+                // try to login the character which is defined in config
+                foreach (CharSelectItem character in Message.WelcomeInfo.Characters)
                 {
-                    Log("SYS", "Logging in character " + character.Name);
+                    if (character.Name.ToLower() == Config.SelectedConnectionInfo.Character.ToLower())
+                    {
+                        Log("SYS", "Logging in character " + character.Name);
 
-                    SendUseCharacterMessage(new ObjectID(character.ID), true);
-                    found = true;
-                    break;
+                        SendUseCharacterMessage(new ObjectID(character.ID), true);
+                        found = true;
+                        break;
+                    }
                 }
             }
 
@@ -405,7 +393,9 @@ namespace Meridian59.Bot
                 ServerConnection.Disconnect();
                 IsRunning = false;
 
-                Log("ERROR", "Character " + Config.Character + " was not found on this account.");
+                if (Config.SelectedConnectionInfo != null)
+                    Log("ERROR", "Character " + Config.SelectedConnectionInfo.Character + " was not found on this account.");
+                
                 Thread.Sleep(SLEEPAFTERERROR);
             }
         }
@@ -447,8 +437,10 @@ namespace Meridian59.Bot
         /// 
         /// </summary>
         /// <param name="Message"></param>
-        protected virtual void HandleSaidMessage(SaidMessage Message)
+        protected override void HandleSaidMessage(SaidMessage Message)
         {
+            base.HandleSaidMessage(Message);
+
             // check if this is a whisper to us
             // by loooking for a substring in the plain rsc text
             if (Message.Message.ResourceName.Contains("tells you"))
@@ -606,7 +598,7 @@ namespace Meridian59.Bot
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void OnAvatarConditionListChanged(object sender, ListChangedEventArgs e)
+        protected virtual void OnAvatarConditionListChanged(object sender, ListChangedEventArgs e)
         {
             DrawCondition();
         }
@@ -616,7 +608,7 @@ namespace Meridian59.Bot
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void OnInventoryObjectsListChanged(object sender, ListChangedEventArgs e)
+        protected virtual void OnInventoryObjectsListChanged(object sender, ListChangedEventArgs e)
         {
             DrawCash();
         }
@@ -626,9 +618,8 @@ namespace Meridian59.Bot
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        protected void OnOnlinePlayersListChanged(object sender, ListChangedEventArgs e)
-        {
-            
+        protected virtual void OnOnlinePlayersListChanged(object sender, ListChangedEventArgs e)
+        {            
         }
 
         /// <summary>

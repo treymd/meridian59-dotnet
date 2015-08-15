@@ -821,13 +821,13 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string res_name;
             string res_mainoverlayname;
 
-            StringResources.TryGetValue(nameRID, out res_name);
-            StringResources.TryGetValue(overlayFileRID, out res_mainoverlayname);
+			StringResources.TryGetValue(nameRID, out res_name);
+			StringResources.TryGetValue(overlayFileRID, out res_mainoverlayname);
 
             if (RaiseChangedEvent)
             {

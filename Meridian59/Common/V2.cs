@@ -31,6 +31,8 @@ namespace Meridian59.Common
     /// </summary>
     public struct V2
     {
+        const Real EPSILON = 0.000001f;
+
         /// <summary>
         /// The zero vector (0,0)
         /// </summary>
@@ -55,6 +57,16 @@ namespace Meridian59.Common
         /// The Y component
         /// </summary>
         public Real Y;
+
+        /// <summary>
+        /// X as a property
+        /// </summary>
+        public Real XProp { get { return X; } set { X = value; } }
+
+        /// <summary>
+        /// Y as a property
+        /// </summary>
+        public Real YProp { get { return Y; } set { Y = value; } }
 
         /// <summary>
         /// The length of the vector. Calculated on the fly.
@@ -151,6 +163,28 @@ namespace Meridian59.Common
         {
             return new V2(v1.X * scalar, v1.Y * scalar);
         }
+
+        /// <summary>
+        /// Implemented operator
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static bool operator ==(V2 v1, V2 v2)
+        {
+            return v1.Equals(v2);
+        }
+
+        /// <summary>
+        /// Implemented operator
+        /// </summary>
+        /// <param name="v1"></param>
+        /// <param name="v2"></param>
+        /// <returns></returns>
+        public static bool operator !=(V2 v1, V2 v2)
+        {
+            return !v1.Equals(v2);
+        }
         #endregion
 
         /// <summary>
@@ -173,7 +207,9 @@ namespace Meridian59.Common
         /// <returns></returns>
         public bool Equals(V2 obj)
         {
-            return (obj.X == X && obj.Y == Y);
+            return 
+                Math.Abs(obj.X-X) <= EPSILON && 
+                Math.Abs(obj.Y-Y) <= EPSILON;
         }
 
         /// <summary>
@@ -351,7 +387,41 @@ namespace Meridian59.Common
         /// <returns></returns>
         public int GetSide(V2 P1, V2 P2)
         {
-            return Math.Sign((P2.X - P1.X) * (Y - P1.Y) - (P2.Y - P1.Y) * (X - P1.X));
+            Real val = (P2.X - P1.X) * (Y - P1.Y) - (P2.Y - P1.Y) * (X - P1.X);
+
+            if (val >= EPSILON)
+                return 1;
+
+            else if (val <= -EPSILON)
+               return -1;
+
+            else
+                return 0;
+        }
+
+        /// <summary>
+        /// Tests whether this V2 instance lies on a line segment
+        /// given by points P1 and P2.
+        /// </summary>
+        /// <param name="P1"></param>
+        /// <param name="P2"></param>
+        /// <returns></returns>
+        public bool IsOnLineSegment(V2 P1, V2 P2)
+        {
+            // the point is not even on the infinite line given by P1P2
+            if (GetSide(P1, P2) != 0)
+                return false;
+
+            // if on infinite line, must also be in boundingbox
+            V2 min, max;
+            min.X = Math.Min(P1.X, P2.X);
+            min.Y = Math.Min(P1.Y, P2.Y);
+            max.X = Math.Max(P1.X, P2.X);
+            max.Y = Math.Max(P1.Y, P2.Y);
+
+            return
+                min.X <= X && X <= max.X &&
+                min.Y <= Y && Y <= max.Y;
         }
 
         /// <summary>

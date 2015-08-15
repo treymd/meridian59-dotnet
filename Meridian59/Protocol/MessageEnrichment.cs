@@ -41,7 +41,7 @@ namespace Meridian59.Protocol
     public class MessageEnrichment
     {
         #region Constants
-        protected const int SLEEPTIME = 1;
+        protected const int SLEEPTIME = 5;
         #endregion
 
         #region Fields
@@ -78,6 +78,7 @@ namespace Meridian59.Protocol
 
             // start own workthread
             workThread = new Thread(ThreadProc);
+            workThread.IsBackground = true;
             workThread.Start();
         }
         #endregion
@@ -186,6 +187,10 @@ namespace Meridian59.Protocol
 
                 case MessageTypeGameMode.Spells:                                // 141
                     HandleSpellsMessage((SpellsMessage)Message);
+                    break;
+
+                case MessageTypeGameMode.SpellAdd:                              // 142
+                    HandleSpellAddMessage((SpellAddMessage)Message);
                     break;
 
                 case MessageTypeGameMode.AddEnchantment:                        // 147
@@ -330,6 +335,15 @@ namespace Meridian59.Protocol
                 obj.ResolveResources(resourceManager, false);
                 obj.DecompressResources();
             }
+        }
+
+        protected virtual void HandleSpellAddMessage(SpellAddMessage Message)
+        {
+            if (Message.NewSpellObject != null)
+            {
+                Message.NewSpellObject.ResolveResources(resourceManager, false);
+                Message.NewSpellObject.DecompressResources();
+            }            
         }
 
         protected virtual void HandleAddEnchantmentMessage(AddEnchantmentMessage Message)

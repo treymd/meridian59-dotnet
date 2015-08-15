@@ -10,6 +10,10 @@ namespace Meridian59 { namespace Ogre
 		Input		= static_cast<CEGUI::Editbox*>(Window->getChild(UI_NAME_CHAT_INPUT));
 		Scrollbar	= static_cast<CEGUI::Scrollbar*>(Text->getChildAtIdx(1));
 
+		// set window layout from config
+		Window->setPosition(OgreClient::Singleton->Config->UILayoutChat->getPosition());
+		Window->setSize(OgreClient::Singleton->Config->UILayoutChat->getSize());
+
 		// set autoscroll on text at start
 		Scrollbar->setEndLockEnabled(true);
 
@@ -31,7 +35,7 @@ namespace Meridian59 { namespace Ogre
 		Window->subscribeEvent(CEGUI::FrameWindow::EventKeyUp, CEGUI::Event::Subscriber(UICallbacks::OnKeyUp));
 
 		// create queue for chatmessage to write at next chatupdate tick
-		Queue = gcnew ::System::Collections::Generic::Queue<::Meridian59::Data::Models::ChatMessage^>();
+		Queue = gcnew ::System::Collections::Generic::Queue<::Meridian59::Data::Models::ServerString^>();
 	};
 
 	void ControllerUI::Chat::Destroy()
@@ -48,7 +52,7 @@ namespace Meridian59 { namespace Ogre
 		Queue = nullptr;
 	};
 
-	void ControllerUI::Chat::Tick(long long Tick, long long Span)
+	void ControllerUI::Chat::Tick(double Tick, double Span)
 	{
 		if (OgreClient::Singleton->GameTick->CanChatUpdate())
 		{
@@ -58,7 +62,7 @@ namespace Meridian59 { namespace Ogre
 				if (Queue->Count > 0)
 				{
 					// get first
-					ChatMessage^ msg = Queue->Dequeue();			
+					ServerString^ msg = Queue->Dequeue();
 					CEGUI::String str = GetChatString(msg);
 
 					// append next ones
@@ -91,7 +95,7 @@ namespace Meridian59 { namespace Ogre
 		}
 	};
 
-	::CEGUI::String ControllerUI::Chat::GetChatString(ChatMessage^ ChatMessage)
+	::CEGUI::String ControllerUI::Chat::GetChatString(ServerString^ ChatMessage)
 	{
 		// text with CEGUI markup and escapes
 		::System::String^ text = ::System::String::Empty;
@@ -277,6 +281,7 @@ namespace Meridian59 { namespace Ogre
 					::CEGUI::String ceguistr = StringConvert::CLRToCEGUI(str);
 
 					chatInput->setText(ceguistr);
+					chatInput->setCaretIndex(ceguistr.length());
 				}
 				break;
 
@@ -288,6 +293,7 @@ namespace Meridian59 { namespace Ogre
 					::CEGUI::String ceguistr = StringConvert::CLRToCEGUI(str);
 
 					chatInput->setText(ceguistr);
+					chatInput->setCaretIndex(ceguistr.length());
 				}
 				else
 				{

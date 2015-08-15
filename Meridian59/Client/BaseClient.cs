@@ -103,6 +103,59 @@ namespace Meridian59.Client
 
         #region Methods
         /// <summary>
+        /// Connects to the currently selected ConnectionInfo in Config
+        /// </summary>
+        public virtual void Connect()
+        {
+            // must have active connectionentry to connect
+            if (Config.SelectedConnectionInfo == null)
+                return;
+
+            // load the strings for this connectionentry
+		    ResourceManager.SelectStringDictionary(
+                Config.SelectedConnectionInfo.StringDictionary,
+				LanguageCode.English); // todo: from config
+
+		    // fill ignore list in datacontroller with ignored
+            // playernames for this connectionentry.
+		    Data.IgnoreList.Clear();
+            Data.IgnoreList.AddRange(Config.SelectedConnectionInfo.IgnoreList);
+
+            // connect to server
+            ServerConnection.Connect(
+                Config.SelectedConnectionInfo.Host, 
+                Config.SelectedConnectionInfo.Port,
+                Config.SelectedConnectionInfo.UseIPv6);
+        }
+
+        /// <summary>
+        /// Disconnects from the server and resets datalayer.
+        /// </summary>
+        public virtual void Disconnect()
+        {
+            ServerConnection.Disconnect();
+
+            Data.Reset();
+            Data.UIMode = UIMode.Login;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public override void Init()
+        {
+            // init the legacy resources
+		    ResourceManager.Init(
+			    Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHSTRINGS,
+			    Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHROOMS,
+			    Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHOBJECTS,
+			    Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHROOMTEXTURES,
+			    Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHSOUNDS,
+			    Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHMUSIC,
+                Config.ResourcesPath + "/" + Meridian59.Files.ResourceManager.SUBPATHMAILS);
+        }
+
+        /// <summary>
         /// Implement this with your code for each tick/update.
         /// </summary>
         public override void Update()
@@ -345,6 +398,10 @@ namespace Meridian59.Client
                     HandleLookupNamesMessage((LookupNamesMessage)Message);
                     break;
 
+                case MessageTypeGameMode.Said:                              // 206
+                    HandleSaidMessage((SaidMessage)Message);
+                    break;
+
                 case MessageTypeGameMode.WallAnimate:                       // 225
                     HandleWallAnimateMessage((WallAnimateMessage)Message);
                     break;
@@ -449,7 +506,7 @@ namespace Meridian59.Client
              */
             
             string modulefile;
-            if (ResourceManager.StringResources.TryGetValue(Message.ResourceID, out modulefile))
+            if (ResourceManager.StringResources.TryGetValue(Message.ResourceID, out modulefile, LanguageCode.English))
             {
                 if (String.Equals(modulefile, CHARDLL))
                 {
@@ -514,6 +571,20 @@ namespace Meridian59.Client
         /// <param name="Message"></param>
         protected virtual void HandleLookupNamesMessage(LookupNamesMessage Message)
         {
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Message"></param>
+        protected virtual void HandleSaidMessage(SaidMessage Message)
+        {
+            // try get player for this message
+            OnlinePlayer player = Data.OnlinePlayers.GetItemByID(Message.Message.SourceObjectID);
+
+            // skip ignored players
+            if (player != null && Data.IgnoreList.Contains(player.Name))
+                return;
         }
 
         /// <summary>
@@ -632,7 +703,7 @@ namespace Meridian59.Client
         {
             // create message instance
             ReqGameStateMessage message = new ReqGameStateMessage(
-                ResourceManager.Config.DownloadVersion, 
+                Config.ResourcesVersion, 
                 AppVersionMajor, 
                 AppVersionMinor, 
                 String.Empty);
@@ -794,6 +865,20 @@ namespace Meridian59.Client
 
             // save updated state in datacontroller
             Data.IsSafety = On;
+        }
+
+        /// <summary>
+        /// Requests to deposit something to the closest NPC? (no ID!)
+        /// </summary>
+        /// <param name="Amount">Amount to try to deposit</param>
+        public virtual void SendUserCommandDeposit(uint Amount)
+        {
+            // create message instance
+            UserCommandDeposit userCommand = new UserCommandDeposit(Amount);
+            UserCommandMessage message = new UserCommandMessage(userCommand, null);
+
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
         }
 
         /// <summary>
@@ -1159,7 +1244,49 @@ namespace Meridian59.Client
             // send/enqueue it (async)
             ServerConnection.SendQueue.Enqueue(message);            
         }
+#if !VANILLA
+        /// <summary>
+        /// Disables or enables the temporary angel after being murdered.
+        /// </summary>
+        public virtual void SendUserCommandTempSafe(bool On)
+        {
+            // create message instance
+            UserCommand command = new UserCommandTempSafe(Convert.ToByte(On));
+            UserCommandMessage message = new UserCommandMessage(command, null);
 
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
+        }
+
+        /// <summary>
+        /// Disables or enables the grouping feature
+        /// </summary>
+        public virtual void SendUserCommandGrouping(bool On)
+        {
+            // create message instance
+            UserCommand command = new UserCommandGrouping(Convert.ToByte(On));
+            UserCommandMessage message = new UserCommandMessage(command, null);
+
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
+        }
+
+        /// <summary>
+        /// Requests to move inventoryitem 'FromID' right in front of 'ToID'.
+        /// </summary>
+        /// <param name="FromID">Item ID to move</param>
+        /// <param name="ToID">Item ID where to move</param>
+        public virtual void SendReqInventoryMoveMessage(uint FromID, uint ToID)
+        {
+            // create message instance
+            ReqInventoryMoveMessage message = new ReqInventoryMoveMessage(
+                FromID, ToID);
+
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
+        }
+
+#endif
         /// <summary>
         /// Sends a custom Action request
         /// </summary>
@@ -1198,7 +1325,16 @@ namespace Meridian59.Client
             else if (Data.TargetObject != null)
             {
                 SendReqAttackMessage(Data.TargetObject.ID);
-            }           
+            }     
+      
+            // else attack attackable in front
+            else
+            {
+                RoomObject obj = Data.ClosestAttackableInFront();
+
+                if (obj != null)
+                    SendReqAttackMessage(obj.ID);
+            }
         }
 
         /// <summary>
@@ -1249,7 +1385,7 @@ namespace Meridian59.Client
         {
             if (SendPositionBefore)           
                 SendReqMoveMessage(true);
-            
+                        
             // create message instance
             ReqGoMessage message = new ReqGoMessage();
 
@@ -1323,15 +1459,19 @@ namespace Meridian59.Client
         /// <param name="ForceSend">Ignores the update-span, but no other conditions.</param>
         public virtual void SendReqMoveMessage(bool ForceSend = false)
         {
-            // must have avatar object
+            // must have an avatar object
             if (Data.AvatarObject == null)
                 return;
+
+            // use horizontalspeed or default to RUN for TELEPORT (0)
+            byte speed = ((byte)Data.AvatarObject.HorizontalSpeed == (byte)MovementSpeed.Teleport) ?
+                (byte)MovementSpeed.Run : (byte)Data.AvatarObject.HorizontalSpeed;
 
             // use the generic variant with our updated values in datalayer
             SendReqMoveMessage(
                 Data.AvatarObject.CoordinateX,
                 Data.AvatarObject.CoordinateY,
-                (byte)Data.AvatarObject.HorizontalSpeed,
+                speed,
                 ForceSend);           
         }
 
@@ -1463,7 +1603,7 @@ namespace Meridian59.Client
                 // create a delay like a cast
                 if (GameTick.CanReqCast())
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "This spell requires a target."));
 
                     GameTick.DidReqCast();
@@ -1853,6 +1993,9 @@ namespace Meridian59.Client
                 // send/enqueue it (async)
                 ServerConnection.SendQueue.Enqueue(message);
 
+                // clear own items (will be echoed back)
+                Data.Trade.ItemsYou.Clear();
+
                 // hide it at that point, server possibly echos back our offer
                 // do NOT clear here because of TradePartner set earlier
                 Data.Trade.IsVisible = false;
@@ -1895,6 +2038,24 @@ namespace Meridian59.Client
                 ServerConnection.SendQueue.Enqueue(message);
             }
         }
+
+#if !VANILLA
+        /// <summary>
+        /// Sends modified stat values from datalayer to the server, requesting a stat change.
+        /// </summary>
+        public virtual void SendChangedStatsMessage()
+        {
+            // get (copy) of currently selected data from datalayer
+            StatChangeInfo info = new StatChangeInfo();
+            info.UpdateFromModel(Data.StatChangeInfo, false);
+
+            // create message instance
+            ChangedStatsMessage message = new ChangedStatsMessage(info);
+
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
+        }
+#endif
 
         /// <summary>
         /// Accepts a pending trade/offer.
@@ -1947,6 +2108,43 @@ namespace Meridian59.Client
         {
             // create message instance
             SendRoomContentsMessage message = new SendRoomContentsMessage();
+
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
+        }
+
+        /// <summary>
+        /// Requests the contents of an object
+        /// </summary>
+        public virtual void SendSendObjectContents(uint ID)
+        {
+            // create message instance
+            SendObjectContentsMessage message = new SendObjectContentsMessage(ID);
+
+            // send/enqueue it (async)
+            ServerConnection.SendQueue.Enqueue(message);
+        }
+
+        /// <summary>
+        /// Requests the contents of your current target ID
+        /// </summary>
+        public virtual void SendSendObjectContents()
+        {
+            if (!ObjectID.IsValid(Data.TargetID))
+                return;
+            
+            SendSendObjectContents(Data.TargetID);
+        }
+
+        /// <summary>
+        /// Requests to put 'Item' into 'Target'
+        /// </summary>
+        /// <param name="Item"></param>
+        /// <param name="Target"></param>
+        public virtual void SendReqPut(ObjectID Item, ObjectID Target)
+        {
+            // create message instance
+            ReqPutMessage message = new ReqPutMessage(Item, Target);
 
             // send/enqueue it (async)
             ServerConnection.SendQueue.Enqueue(message);
@@ -2129,6 +2327,9 @@ namespace Meridian59.Client
             SendSendStatsMessage(StatGroup.Attributes);
             SendSendStatsMessage(StatGroup.Skills);
             SendSendStatsMessage(StatGroup.Spells);
+#if !VANILLA
+            SendSendStatsMessage(StatGroup.Quests);
+#endif
 
             // request inventory
             SendReqInventoryMessage();
@@ -2174,7 +2375,8 @@ namespace Meridian59.Client
         {
             // no movements when resting or paralyzed
             if (!Data.IsResting &&
-                !Data.Effects.Paralyze.IsActive)
+                !Data.Effects.Paralyze.IsActive &&
+                CurrentRoom != null)
             {
                 // slow down movements to walkspeed if not enough vigor
                 if (Data.VigorPoints < StatNumsValues.LOWVIGOR && Speed > (byte)MovementSpeed.Walk)
@@ -2192,6 +2394,18 @@ namespace Meridian59.Client
 
                 // step based on direction and tick delta
                 V2 step = Direction * (Real)Speed * (Real)GameTick.Span * GeometryConstants.MOVEBASECOEFF;
+
+                // slow down movements sectors with depth modifiers
+                if (avatar.SubSector != null && avatar.SubSector.Sector != null)
+                {
+                    switch(avatar.SubSector.Sector.Flags.SectorDepth)
+                    {
+                        case RooSectorFlags.DepthType.Depth0: break;
+                        case RooSectorFlags.DepthType.Depth1: step.Scale(0.75f); break;
+                        case RooSectorFlags.DepthType.Depth2: step.Scale(0.5f);  break;
+                        case RooSectorFlags.DepthType.Depth3: step.Scale(0.25f); break;
+                    }
+                }
 
                 // apply step on start ("end candidate")
                 V2 end = start2D + step;
@@ -2357,7 +2571,7 @@ namespace Meridian59.Client
             Data.ChatCommandHistoryAdd(Text);
 
             // parse chatcommand
-            ChatCommand chatCommand = ChatCommand.Parse(Text, Data);
+            ChatCommand chatCommand = ChatCommand.Parse(Text, Data, Config);
 
             // handle chatcommand
             if (chatCommand != null)
@@ -2399,6 +2613,11 @@ namespace Meridian59.Client
                         SendReqCastMessage(chatCommandCast.Spell);
                         break;
 
+                    case ChatCommandType.Deposit:
+                        ChatCommandDeposit chatCommandDeposit = (ChatCommandDeposit)chatCommand;
+                        SendUserCommandDeposit(chatCommandDeposit.Amount);
+                        break;
+
                     case ChatCommandType.WithDraw:
                         ChatCommandWithDraw chatCommandWithDraw = (ChatCommandWithDraw)chatCommand;
                         SendUserCommandWithDraw(chatCommandWithDraw.Amount);
@@ -2438,6 +2657,19 @@ namespace Meridian59.Client
                     case ChatCommandType.Stand:
                         SendUserCommandStand();
                         break;
+
+                    case ChatCommandType.Quit:
+                        SendReqQuit();
+                        break;
+#if !VANILLA
+                    case ChatCommandType.TempSafe:
+                        SendUserCommandTempSafe(((ChatCommandTempSafe)chatCommand).On);
+                        break;
+
+                    case ChatCommandType.Grouping:
+                        SendUserCommandGrouping(((ChatCommandGrouping)chatCommand).On);
+                        break;
+#endif
                 }
             }    
         }
@@ -2505,7 +2737,16 @@ namespace Meridian59.Client
                     break;
 
                 case AvatarAction.Activate:
-                    SendReqActivate();
+                    // for objects set with cointaier flag
+                    if (Data.TargetObject != null)
+                    {
+                        if (Data.TargetObject.Flags.IsContainer)                           
+                            SendSendObjectContents();
+                        
+                        else 
+                            SendReqActivate();
+                    }
+                   
                     break;
 
                 case AvatarAction.Trade:

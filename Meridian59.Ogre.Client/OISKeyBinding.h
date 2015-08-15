@@ -23,8 +23,6 @@
 namespace Meridian59 { namespace Ogre
 {
 	using namespace OIS;
-	using namespace Meridian59::Launcher::Models;
-	using namespace System::Windows::Forms;
 
 	/// <summary>
     /// A keybinding for typical actions,
@@ -126,15 +124,5 @@ namespace Meridian59 { namespace Ogre
         /// A static default keybinding.
         /// </summary>
         static OISKeyBinding^ GetDefault();
-
-		/// <summary>
-        /// Converts a Launcher keybinding to a OISKeybinding.
-        /// </summary>
-		static OISKeyBinding^ FromKeyBinding(KeyBinding^ KeyBinding);
-
-		/// <summary>
-        /// Converts a Windows.Forms.Keys enum to OIS KeyCode
-        /// </summary>
-		static ::OIS::KeyCode KeysToKeyCode(::System::Windows::Forms::Keys Key);
 	};
 };};

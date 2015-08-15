@@ -17,6 +17,10 @@ namespace Meridian59 { namespace Ogre
 		ShowPK		= static_cast<CEGUI::ToggleButton*>(Window->getChild(UI_NAME_ROOMOBJECTS_SHOWPK));
 		ShowBuy		= static_cast<CEGUI::ToggleButton*>(Window->getChild(UI_NAME_ROOMOBJECTS_SHOWBUY));
 
+		// set window layout from config
+		Window->setPosition(OgreClient::Singleton->Config->UILayoutRoomObjects->getPosition());
+		Window->setSize(OgreClient::Singleton->Config->UILayoutRoomObjects->getSize());
+
 		// attach listener to roomobjectsfiltered
 		OgreClient::Singleton->Data->RoomObjectsFiltered->ListChanged += 
 			gcnew ListChangedEventHandler(&ControllerUI::RoomObjects::OnRoomObjectsFilteredListChanged);
@@ -212,10 +216,10 @@ namespace Meridian59 { namespace Ogre
 				wndName->setText(StringConvert::CLRToCEGUI(roomobj->Name));
 
 				// some special name background for enemy/guild
-				if (roomobj->Flags->IsEnemy)
+				if (roomobj->Flags->IsMinimapEnemy)
 					wndName->setProperty(UI_PROPNAME_BACKGROUNDCOLOURS, UI_COLOURRECT_ROOMOBJECTS_BACKGROUND_ENEMY);
 
-				else if (roomobj->Flags->IsGuildMate || roomobj->Flags->IsFriend)
+				else if (roomobj->Flags->IsMinimapGuildMate || roomobj->Flags->IsMinimapFriend)
 					wndName->setProperty(UI_PROPNAME_BACKGROUNDCOLOURS, UI_COLOURRECT_ROOMOBJECTS_BACKGROUND_FRIEND);
 				
 				else
@@ -338,7 +342,7 @@ namespace Meridian59 { namespace Ogre
 #else
 					flags = gcnew ObjectFlags(0);
 #endif
-					flags->IsGuildMate = true;
+					flags->IsMinimapGuildMate = true;
 
 					filteredList->FlagsFilter->Add(flags);
 				}
@@ -350,7 +354,7 @@ namespace Meridian59 { namespace Ogre
 #else
 					flags = gcnew ObjectFlags(0);
 #endif
-					flags->IsEnemy = true;
+					flags->IsMinimapEnemy = true;
 
 					filteredList->FlagsFilter->Add(flags);
 				}
@@ -362,7 +366,7 @@ namespace Meridian59 { namespace Ogre
 #else
 					flags = gcnew ObjectFlags(0);
 #endif
-					flags->IsFriend = true;
+					flags->IsMinimapFriend = true;
 
 					filteredList->FlagsFilter->Add(flags);
 				}
@@ -395,12 +399,12 @@ namespace Meridian59 { namespace Ogre
 				{
 #ifndef VANILLA
 					flags = gcnew ObjectFlags(0, ObjectFlags::DrawingType::Plain, 0, 0, ObjectFlags::PlayerType::None, ObjectFlags::MoveOnType::Yes);
-					flags->IsMinionOther = true;
+					flags->IsMinimapMinionOther = true;
 
 					filteredList->FlagsFilter->Add(flags);
 
 					flags = gcnew ObjectFlags(0, ObjectFlags::DrawingType::Plain, 0, 0, ObjectFlags::PlayerType::None, ObjectFlags::MoveOnType::Yes);
-					flags->IsMinionSelf = true;
+					flags->IsMinimapMinionSelf = true;
 
 					filteredList->FlagsFilter->Add(flags);
 #endif

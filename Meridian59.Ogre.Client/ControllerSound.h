@@ -63,14 +63,7 @@ namespace Meridian59 { namespace Ogre
 		static void HandlePlayMusicMessage(PlayMusicMessage^ Message);
 		static void HandlePlayMidiMessage(PlayMidiMessage^ Message);
 
-		static void StartMusic(PlayMusic^ Info);
-
 	public:
-		/// <summary>
-        /// Volume for playback of music (not sound!), 0 is disabled.
-        /// </summary>
-		static float MusicVolume = 1.0f;
-
 		/// <summary>
         /// All sounds not attached to roomobject IDs (i.e. mapsounds)
         /// </summary>
@@ -96,11 +89,19 @@ namespace Meridian59 { namespace Ogre
 		static bool IsInitialized;
 
 		/// <summary>
+		/// Manually starts to play given music data
+		/// </summary>
+		static void StartMusic(PlayMusic^ Info);
+
+		/// <summary>
         /// Sets the node which position and orientation is observed
         /// for 3D sound.
         /// </summary>
         /// <param name="AvatarNode"></param>
         static void SetListenerNode(RemoteNode^ AvatarNode);
+
+		static void AdjustMusicVolume();
+		static void AdjustSoundVolume();
 
 		static void HandleGameModeMessage(GameModeMessage^ Message);
 	};

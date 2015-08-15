@@ -99,6 +99,68 @@ namespace Meridian59.Data.Lists
             return null;
         }
 
+        public SkillList GetItemsByPrefix(string Prefix, bool CaseSensitive = true)
+        {
+            SkillList list = new SkillList();
+
+            if (Prefix == null)
+                return list;
+
+            if (CaseSensitive)
+            { 
+                // add matches
+                foreach (StatList entry in this)
+                    if (entry.ResourceName != null && entry.ResourceName.IndexOf(Prefix) == 0)
+                        list.Add(entry);
+            }
+            else
+            {
+                // add matches
+                foreach (StatList entry in this)
+                    if (entry.ResourceName != null && entry.ResourceName.ToLower().IndexOf(Prefix.ToLower()) == 0)
+                        list.Add(entry);
+            }
+
+            return list;
+        }
+        public StatList GetItemByName(string Name, bool CaseSensitive = true)
+        {
+            if (CaseSensitive)
+            {
+                foreach (StatList entry in this)
+                    if (String.Equals(entry.ResourceName, Name))
+                        return entry;
+            }
+            else
+            {
+                foreach (StatList entry in this)
+                    if (String.Equals(entry.ResourceName.ToLower(), Name.ToLower()))
+                        return entry;
+            }
+
+            return null;
+        }
+
+        public SkillList GetItemsByName(string Name, bool CaseSensitive = true)
+        {
+            SkillList list = new SkillList();
+
+            if (CaseSensitive)
+            {
+                foreach (StatList entry in this)
+                    if (String.Equals(entry.ResourceName, Name))
+                        list.Add(entry);
+            }
+            else
+            {
+                foreach (StatList entry in this)
+                    if (String.Equals(entry.ResourceName.ToLower(), Name.ToLower()))
+                        list.Add(entry);
+            }
+
+            return list;
+        }
+
         public bool RemoveByNum(uint Num)
         {
             bool returnValue = false;

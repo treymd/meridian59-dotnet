@@ -24,9 +24,10 @@ using Meridian59.Common;
 namespace Meridian59.Data.Models
 {
     /// <summary>
-    /// Derived from ChatMessage, adds a sender ID and ResourceID
+    /// Derived from ServerString.
+	/// Additionally has blakserv ID and resource ID of sender of the message.
     /// </summary>
-    public class ObjectChatMessage : ChatMessage
+    public class ObjectChatMessage : ServerString
     {
         #region IByteSerializable
         public override int ByteLength
@@ -153,7 +154,7 @@ namespace Meridian59.Data.Models
             uint SourceObjectID,
             uint SourceResourceID,
             ChatTransmissionType TransmissionType,
-            LockingDictionary<uint, string> LookupList,
+			StringDictionary LookupList,
             uint ResourceID, 
             List<InlineVariable> Variables,
             List<ChatStyle> Styles) 
@@ -164,10 +165,10 @@ namespace Meridian59.Data.Models
             this.transmissionType = TransmissionType;
         }
 
-        public ObjectChatMessage(LockingDictionary<uint, string> LookupList, byte[] Buffer, int StartIndex = 0)
+		public ObjectChatMessage(StringDictionary LookupList, byte[] Buffer, int StartIndex = 0)
             : base(ChatMessageType.ObjectChatMessage, LookupList, Buffer, StartIndex) { }
 
-        public unsafe ObjectChatMessage(LockingDictionary<uint, string> LookupList, ref byte* Buffer)
+		public unsafe ObjectChatMessage(StringDictionary LookupList, ref byte* Buffer)
             : base(ChatMessageType.ObjectChatMessage, LookupList, ref Buffer) { }
 
         #endregion

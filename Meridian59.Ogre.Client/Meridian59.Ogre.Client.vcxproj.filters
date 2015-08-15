@@ -87,9 +87,6 @@
     <ClInclude Include="StringConvert.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="StringDefines.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Util.h">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -109,6 +106,12 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="DataControllerOgre.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="OgreClientConfig.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Constants.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -286,6 +289,18 @@
     <ClCompile Include="ParticleUniverseEventHandlers.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="UIOptions.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="OgreClientConfig.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="UILogin.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="UIQuests.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="app.ico">
@@ -296,6 +311,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="README.txt" />
+    <Xml Include="configuration.xml" />
   </ItemGroup>
 </Project>

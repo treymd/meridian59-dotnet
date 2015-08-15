@@ -77,7 +77,7 @@ namespace Meridian59.Protocol
         /// <summary>
         /// Reference to a populated dictionary with game strings.
         /// </summary>
-        protected LockingDictionary<uint, string> stringResources;
+        protected StringDictionary stringResources;
         #endregion
 
         #region Properties
@@ -125,7 +125,7 @@ namespace Meridian59.Protocol
         /// Constructor
         /// </summary>
         /// <param name="StringResources">A dictionary to resolve Meridian59 strings from.</param>
-        public MessageController(LockingDictionary<uint, string> StringResources)
+		public MessageController(StringDictionary StringResources)
         {
             // save string dictionary
             this.stringResources = StringResources;
@@ -555,7 +555,11 @@ namespace Meridian59.Protocol
                     case MessageTypeGameMode.ChangeDescription:                               // PI: 126
                         TypedMessage = new ChangeDescriptionMessage(e.MessageBuffer);
                         break;
-
+#if !VANILLA
+                    case MessageTypeGameMode.ReqInventoryMove:                                // PI: 127
+                        TypedMessage = new ReqInventoryMoveMessage(e.MessageBuffer);
+                        break;
+#endif
                     case MessageTypeGameMode.Player:                                          // PI: 130
                         TypedMessage = new PlayerMessage(ref pMessage);
                         HandlePlayer((PlayerMessage)TypedMessage);
@@ -674,7 +678,15 @@ namespace Meridian59.Protocol
                         TypedMessage = new UserCommandMessage(stringResources, e.Direction, e.MessageBuffer);
                         HandleUserCommand((UserCommandMessage)TypedMessage);
                         break;
+#if !VANILLA
+                    case MessageTypeGameMode.ReqStatChange:                                   // PI: 156
+                        TypedMessage = new ReqStatChangeMessage(e.MessageBuffer);                
+                        break;
 
+                    case MessageTypeGameMode.ChangedStats:                                    // PI: 157
+                        TypedMessage = new ChangedStatsMessage(e.MessageBuffer);
+                        break;
+#endif
                     case MessageTypeGameMode.PasswordOK:
                         TypedMessage = new PasswordOKMessage(e.MessageBuffer);                // PI: 160
                         break;
@@ -1008,18 +1020,18 @@ namespace Meridian59.Protocol
         protected void HandlePlayers(PlayersMessage Message)
         {
             foreach (OnlinePlayer obj in Message.OnlinePlayers)
-                stringResources.TryAdd(obj.NameRID, obj.Name);
+                stringResources.TryAdd(obj.NameRID, obj.Name, LanguageCode.English);
         }
 
         protected void HandlePlayerAdd(PlayerAddMessage Message)
         {
-            stringResources.TryAdd(Message.NewOnlinePlayer.NameRID, Message.NewOnlinePlayer.Name);
+            stringResources.TryAdd(Message.NewOnlinePlayer.NameRID, Message.NewOnlinePlayer.Name, LanguageCode.English);
         }
 
         protected void HandlePlayerRemove(PlayerRemoveMessage Message)
         {
             string temp;
-            stringResources.TryRemove(Message.ObjectID, out temp);
+            stringResources.TryRemove(Message.ObjectID, out temp, LanguageCode.English);
         }
 
         protected void HandleStatGroup(StatGroupMessage Message)
@@ -1134,11 +1146,11 @@ namespace Meridian59.Protocol
         {
             string temp;
 
-            // remove old
-            stringResources.TryRemove(Message.ResourceID, out temp);
+            // remove old (always english)
+            stringResources.TryRemove(Message.ResourceID, out temp, LanguageCode.English);
 
-            // add new
-            stringResources.TryAdd(Message.ResourceID, Message.NewValue);
+            // add new (always english)
+            stringResources.TryAdd(Message.ResourceID, Message.NewValue, LanguageCode.English);
         }
 
         protected void HandleRoomContents(RoomContentsMessage Message)

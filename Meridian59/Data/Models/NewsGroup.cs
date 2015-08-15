@@ -20,6 +20,7 @@ using Meridian59.Common.Interfaces;
 using Meridian59.Common.Constants;
 using Meridian59.Data.Lists;
 using Meridian59.Common;
+using Meridian59.Common.Enums;
 
 namespace Meridian59.Data.Models
 {
@@ -332,11 +333,11 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public virtual void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public virtual void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string res_name;
-            
-            StringResources.TryGetValue(headlineResourceID, out res_name);
+
+			StringResources.TryGetValue(headlineResourceID, out res_name);
             
             if (RaiseChangedEvent)
             {

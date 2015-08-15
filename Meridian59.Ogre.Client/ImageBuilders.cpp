@@ -414,6 +414,7 @@ namespace Meridian59 { namespace Ogre
 		// create painer
 		graphics = ::System::Drawing::Graphics::FromImage(dest);
 		graphics->InterpolationMode = InterpolationMode;
+		graphics->SmoothingMode = SmoothingMode::HighQuality;
 
 #ifdef _DEBUG
 		graphics->Clear(Color::Black);
@@ -835,7 +836,7 @@ namespace Meridian59 { namespace Ogre
 		FLOAT scaley = (FLOAT)(DestRect->bottom - DestRect->top) / (FLOAT)BgfBitmap->Height;
 			
 		D3DXMatrixTransformation2D(&mat, NULL, 0.0f, &D3DXVECTOR2(scalex, scaley),  
-			NULL, 0.0f, &D3DXVECTOR2(DestRect->left, DestRect->top));
+			NULL, 0.0f, &D3DXVECTOR2((float)DestRect->left, (float)DestRect->top));
 
 		// transform
 		hr = (**sprite).SetTransform(&mat);

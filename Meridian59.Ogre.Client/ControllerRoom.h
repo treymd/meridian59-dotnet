@@ -32,7 +32,7 @@
 
 #include "Util.h"
 #include "StringConvert.h"
-#include "StringDefines.h"
+#include "Constants.h"
 #include "RemoteNode.h"
 #include "RemoteNode2D.h"
 #include "RemoteNode3D.h"
@@ -73,13 +73,18 @@ namespace Meridian59 { namespace Ogre
 		literal float SCALE						= 0.0625f;
 		literal ::Ogre::Real PARTICLESYSCAMERAOFFSET = (::Ogre::Real)200.f;
 
-		static ::Ogre::StaticGeometry*				roomGeometry;
+		static ::Ogre::ManualObject*				roomDecoration;
 		static ::Ogre::SceneNode*					roomNode;
+		static ::Ogre::ManualObject*				roomManObj;
 		static ::Caelum::CaelumSystem*				caelumSystem;
 		static ::Meridian59::Ogre::RemoteNode^		avatarObject;		
-		static ::std::vector<ManualObject*>*		decoration;
 		static ::ParticleUniverse::ParticleSystem*	particleSysSnow;
+		
+		static ::System::Collections::Generic::List<::System::String^>^ recreatequeue;
 
+		static Dictionary<unsigned short, array<System::String^>^>^ grassMaterials;
+		static Dictionary<::System::String^, ::System::Collections::Generic::List<V3>^>^ grassPoints;
+		static List<::System::String^>^ waterTextures;
 		static ::std::vector<::ParticleUniverse::ParticleEventHandler*>* customParticleHandlers;
 
         /// <summary>
@@ -87,19 +92,16 @@ namespace Meridian59 { namespace Ogre
         /// </summary>
         static unsigned int verticesProcessed;
 
-		/// <summary>
-        /// Stores an array of grass materials for a roomtexture grdXXXXX key
-        /// </summary>
-		static Dictionary<unsigned short, array<System::String^>^>^ grassMaterials;
-
 		static void HandlePlayerMessage(PlayerMessage^ Message);
 		static void HandleLightAmbient(LightAmbientMessage^ Message);
 		static void HandleLightPlayer(LightPlayerMessage^ Message);
+		static void HandleLightShading(LightShadingMessage^ Message);
 		static void HandleBackground(BackgroundMessage^ Message);
 		
-		static void UpdateSky();
 		static void AdjustOctree();
 		static void AdjustAmbientLight();
+		static int GetRoomSectionByMaterial(::Ogre::String Name);
+		static int GetDecorationSectionByMaterial(::Ogre::String Name);
 
 		/// <summary>
         /// Static constructor
@@ -107,25 +109,17 @@ namespace Meridian59 { namespace Ogre
 		static ControllerRoom();
 
 		/// <summary>
-		/// Creates a side.
-		/// </summary>
-		/// <param name="Side"></param>
-		static void CreateSide(RooSideDef^ Side);
-
-		/// <summary>
         /// Creates all walls belonging to a part of a side.
 		/// Called from CreateSide()
         /// </summary>
-		/// <param name="Target"></param>
         /// <param name="Side"></param>
 		/// <param name="PartType"></param>
-		static void CreateSidePart(ManualObject* Target, RooSideDef^ Side, WallPartType PartType);
+		static void CreateSidePart(RooSideDef^ Side, WallPartType PartType);
 
 		/// <summary>
         /// Creates a part of a wall.
 		/// Called from CreateSidePart()
         /// </summary>
-		/// <param name="Target">Will put vertices into this</param>
         /// <param name="Wall">Which wall to create a part from</param>
         /// <param name="PartType">Upper, Middle, Lower</param>
 		/// <param name="IsLeftSide">Whether to create left or right side</param>
@@ -133,7 +127,6 @@ namespace Meridian59 { namespace Ogre
 		/// <param name="TextureHeight">TextureHeight</param>
 		/// <param name="TextureShrink">TextureShrink</param>
 		static void CreateWallPart(
-			ManualObject* Target, 
 			RooWall^ Wall, 
 			WallPartType PartType, 
 			bool IsLeftSide, 
@@ -142,36 +135,31 @@ namespace Meridian59 { namespace Ogre
 			int TextureShrink);
 
 		/// <summary>
-        /// Creates a sector
-        /// </summary>
-        /// <param name="Sector"></param>
-        static void CreateSector(RooSector^ Sector);
-
-		/// <summary>
 		/// Creates a sector floor or ceiling
 		/// Called from CreateSector()
 		/// </summary>
-		/// <param name="Target"></param>
 		/// <param name="Sector"></param>
 		/// <param name="IsFloor"></param>
-		static void CreateSectorPart(ManualObject* Target, RooSector^ Sector, bool IsFloor);
+		static void CreateSectorPart(RooSector^ Sector, bool IsFloor);
 
 		/// <summary>
         /// Creates a subsector of a floor or ceiling
 		/// Called from CreateSectorPart()
         /// </summary>
-        /// <param name="Target"></param>
         /// <param name="SubSector"></param>
         /// <param name="IsFloor"></param>
-        static void CreateSubSector(ManualObject* Target, RooSubSector^ SubSector, bool IsFloor);
+        static void CreateSubSector(RooSubSector^ SubSector, bool IsFloor);
 
 		/// <summary>
-		/// Creates decorations on a subsector floor
+		/// Creates all floors and sides using specific materialname
 		/// </summary>
-		/// <param name="SubSector"></param>
-		/// <param name="RI"></param>
-		/// <param name="IsFloor"></param>
-		static void CreateDecoration(RooSubSector^ SubSector, RooSubSector::RenderInfo^ RI, bool IsFloor);
+		/// <param name="MaterialName"></param>
+		static void CreateGeometryChunk(::System::String^ MaterialName);
+
+		/// <summary>
+		/// Creates decorations
+		/// </summary>
+		static void CreateDecoration();
 
 		/// <summary>
         /// Possibly creates a single texture and material based on required info.
@@ -186,16 +174,6 @@ namespace Meridian59 { namespace Ogre
         /// Loads the room improvement data (grass, ...) from xml files
         /// </summary>
 		static void LoadImproveData();
-
-		/// <summary>
-        /// Inits Caelum
-        /// </summary>
-		static void InitCaelum();
-
-		/// <summary>
-        /// Destroys Caelum
-        /// </summary>
-		static void DestroyCaelum();
 
 		/// <summary>
         /// Inits room based particle systems
@@ -331,7 +309,22 @@ namespace Meridian59 { namespace Ogre
         /// Initialization state
         /// </summary>
 		static bool IsInitialized = false;
+
+		/// <summary>
+		/// Inits Caelum
+		/// </summary>
+		static void InitCaelum();
+
+		/// <summary>
+		/// Destroys Caelum
+		/// </summary>
+		static void DestroyCaelum();
 		
+		/// <summary>
+		/// Refreshs the sky after a change between legacy/caelum
+		/// </summary>
+		static void UpdateSky();
+
 		/// <summary>
         /// Loads the current room
         /// </summary>
@@ -345,7 +338,7 @@ namespace Meridian59 { namespace Ogre
 		/// <summary>
         /// 
         /// </summary>
-        static void Tick(long long Tick, long long Span);
+		static void Tick(double Tick, double Span);
 
 		/// <summary>
         /// Handle a GameMode message

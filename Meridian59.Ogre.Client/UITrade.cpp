@@ -127,10 +127,6 @@ namespace Meridian59 { namespace Ogre
 			case ::System::ComponentModel::ListChangedType::ItemDeleted:
 				ItemYouRemove(e->NewIndex);
 				break;
-
-			case ::System::ComponentModel::ListChangedType::ItemChanged:
-				ItemYouChange(e->NewIndex);
-				break;
 		}
 	};
 
@@ -144,10 +140,6 @@ namespace Meridian59 { namespace Ogre
 
 			case ::System::ComponentModel::ListChangedType::ItemDeleted:
 				ItemPartnerRemove(e->NewIndex);
-				break;
-
-			case ::System::ComponentModel::ListChangedType::ItemChanged:
-				ItemPartnerChange(e->NewIndex);
 				break;
 		}
 	};
@@ -164,9 +156,6 @@ namespace Meridian59 { namespace Ogre
 		// set ID
 		widget->setID(obj->ID);
 
-		// set cursor
-		widget->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		
 		// subscribe click event
 		widget->subscribeEvent(
 			CEGUI::ItemEntry::EventMouseClick, 
@@ -184,9 +173,6 @@ namespace Meridian59 { namespace Ogre
 			CEGUI::Window* name		= (CEGUI::Window*)widget->getChildAtIdx(UI_TRADE_CHILDINDEX_NAME);
 			CEGUI::Editbox* amount	= (CEGUI::Editbox*)widget->getChildAtIdx(UI_TRADE_CHILDINDEX_AMOUNT);
 
-			icon->setMouseCursor(UI_MOUSECURSOR_TARGET);
-			name->setMouseCursor(UI_MOUSECURSOR_TARGET);
-
 			// subscribe event to focusleave on textbox
 			amount->subscribeEvent(CEGUI::Editbox::EventDeactivated, CEGUI::Event::Subscriber(UICallbacks::Trade::OnItemYouAmountDeactivated));
 			amount->subscribeEvent(CEGUI::Editbox::EventTextAccepted, CEGUI::Event::Subscriber(UICallbacks::Trade::OnItemYouAmountDeactivated));
@@ -201,6 +187,18 @@ namespace Meridian59 { namespace Ogre
 			amount->subscribeEvent(
 				CEGUI::Editbox::EventDragDropItemDropped,
 				CEGUI::Event::Subscriber(UICallbacks::Trade::OnListYouItemDropped));
+
+			// get color
+			::CEGUI::Colour color = ::CEGUI::Colour(
+				NameColors::GetColorFor(obj->Flags));
+
+			// set color and name
+			name->setProperty(UI_PROPNAME_NORMALTEXTCOLOUR, ::CEGUI::PropertyHelper<::CEGUI::Colour>::toString(color));
+			name->setText(StringConvert::CLRToCEGUI(obj->Name));
+
+			// set default amount
+			amount->setText(CEGUI::PropertyHelper<unsigned int>::toString(obj->Count));
+			amount->setVisible(obj->IsStackable);
 		}
 
 		// insert widget in ui-list
@@ -228,9 +226,9 @@ namespace Meridian59 { namespace Ogre
 		
 		// insert composer into list at index
 		imageComposersYou->Insert(Index, imageComposer);
-
-		// update values
-		ItemYouChange(Index);
+		
+		// create image
+		imageComposer->DataSource = obj;
 	};
 
 	void ControllerUI::Trade::ItemYouRemove(int Index)
@@ -251,41 +249,6 @@ namespace Meridian59 { namespace Ogre
 		}
 	};
 
-	void ControllerUI::Trade::ItemYouChange(int Index)
-	{
-		ObjectBase^ obj = OgreClient::Singleton->Data->Trade->ItemsYou[Index];
-		
-		// set imagecomposer datasource
-		if (imageComposersYou->Count > Index)
-			imageComposersYou[Index]->DataSource = obj;
-		
-		// check
-		if ((int)ListYou->getItemCount() > Index)
-		{
-			CEGUI::ItemEntry* wnd = (CEGUI::ItemEntry*)ListYou->getItemFromIndex(Index);
-
-			// check
-			if (wnd->getChildCount() > 2)
-			{
-				CEGUI::Window* icon		= (CEGUI::Window*)wnd->getChildAtIdx(UI_TRADE_CHILDINDEX_ICON);
-				CEGUI::Window* name		= (CEGUI::Window*)wnd->getChildAtIdx(UI_TRADE_CHILDINDEX_NAME);
-				CEGUI::Editbox* amount	= (CEGUI::Editbox*)wnd->getChildAtIdx(UI_TRADE_CHILDINDEX_AMOUNT);
-
-				// get color
-				::CEGUI::Colour color = ::CEGUI::Colour(
-					NameColors::GetColorFor(obj->Flags));
-		
-				// set color and name
-				name->setProperty(UI_PROPNAME_NORMALTEXTCOLOUR, ::CEGUI::PropertyHelper<::CEGUI::Colour>::toString(color));
-				name->setText(StringConvert::CLRToCEGUI(obj->Name));
-
-				// set default amount
-				amount->setText(CEGUI::PropertyHelper<unsigned int>::toString(obj->Count));
-				amount->setVisible(obj->IsStackable);
-			}
-		}
-	};
-
 	void ControllerUI::Trade::ItemPartnerAdd(int Index)
 	{
 		CEGUI::WindowManager* wndMgr = CEGUI::WindowManager::getSingletonPtr();
@@ -297,9 +260,6 @@ namespace Meridian59 { namespace Ogre
 		
 		// set id
 		widget->setID(obj->ID);
-
-		// set cursor
-		widget->setMouseCursor(UI_MOUSECURSOR_TARGET);
 
 		// subscribe click event
 		widget->subscribeEvent(
@@ -313,13 +273,23 @@ namespace Meridian59 { namespace Ogre
 			CEGUI::Window* name		= (CEGUI::Window*)widget->getChildAtIdx(UI_TRADE_CHILDINDEX_NAME);
 			CEGUI::Editbox* amount	= (CEGUI::Editbox*)widget->getChildAtIdx(UI_TRADE_CHILDINDEX_AMOUNT);
 
-			icon->setMouseCursor(UI_MOUSECURSOR_TARGET);
-			name->setMouseCursor(UI_MOUSECURSOR_TARGET);
 			amount->setReadOnly(true);
 
 			// subscribe event to focusleave on textbox
 			amount->subscribeEvent(CEGUI::Editbox::EventDeactivated, CEGUI::Event::Subscriber(UICallbacks::Buy::OnItemAmountDeactivated));
 			amount->subscribeEvent(CEGUI::Editbox::EventTextAccepted, CEGUI::Event::Subscriber(UICallbacks::Buy::OnItemAmountDeactivated));
+
+			// get color
+			::CEGUI::Colour color = ::CEGUI::Colour(
+				NameColors::GetColorFor(obj->Flags));
+
+			// set color and name
+			name->setProperty(UI_PROPNAME_NORMALTEXTCOLOUR, ::CEGUI::PropertyHelper<::CEGUI::Colour>::toString(color));
+			name->setText(StringConvert::CLRToCEGUI(obj->Name));
+
+			// set default amount
+			amount->setText(CEGUI::PropertyHelper<unsigned int>::toString(obj->Count));
+			amount->setVisible(obj->IsStackable);
 		}
 
 		// insert widget in ui-list
@@ -348,8 +318,8 @@ namespace Meridian59 { namespace Ogre
 		// insert composer into list at index
 		imageComposersPartner->Insert(Index, imageComposer);
 
-		// update values
-		ItemPartnerChange(Index);
+		// create image
+		imageComposer->DataSource = obj;
 	};
 
 	void ControllerUI::Trade::ItemPartnerRemove(int Index)
@@ -367,41 +337,6 @@ namespace Meridian59 { namespace Ogre
 			
 			// remove from list
 			imageComposersPartner->RemoveAt(Index);
-		}
-	};
-
-	void ControllerUI::Trade::ItemPartnerChange(int Index)
-	{
-		ObjectBase^ obj = OgreClient::Singleton->Data->Trade->ItemsPartner[Index];
-		
-		// set imagecomposer datasource
-		if (imageComposersPartner->Count > Index)
-			imageComposersPartner[Index]->DataSource = obj;
-		
-		// check
-		if ((int)ListPartner->getItemCount() > Index)
-		{
-			CEGUI::ItemEntry* wnd = (CEGUI::ItemEntry*)ListPartner->getItemFromIndex(Index);
-
-			// check
-			if (wnd->getChildCount() > 2)
-			{
-				CEGUI::Window* icon		= (CEGUI::Window*)wnd->getChildAtIdx(UI_TRADE_CHILDINDEX_ICON);
-				CEGUI::Window* name		= (CEGUI::Window*)wnd->getChildAtIdx(UI_TRADE_CHILDINDEX_NAME);
-				CEGUI::Editbox* amount	= (CEGUI::Editbox*)wnd->getChildAtIdx(UI_TRADE_CHILDINDEX_AMOUNT);
-
-				// get color
-				::CEGUI::Colour color = ::CEGUI::Colour(
-					NameColors::GetColorFor(obj->Flags));
-		
-				// set color and name
-				name->setProperty(UI_PROPNAME_NORMALTEXTCOLOUR, ::CEGUI::PropertyHelper<::CEGUI::Colour>::toString(color));
-				name->setText(StringConvert::CLRToCEGUI(obj->Name));
-
-				// set default amount
-				amount->setText(CEGUI::PropertyHelper<unsigned int>::toString(obj->Count));
-				amount->setVisible(obj->IsStackable);
-			}
 		}
 	};
 
@@ -531,7 +466,8 @@ namespace Meridian59 { namespace Ogre
 			// create an entry in our offerlist from the inventory datamodel
 			if (dataModels->Count > index)
 			{
-				OgreClient::Singleton->Data->Trade->ItemsYou->Add(dataModels[index]);					
+				if (!OgreClient::Singleton->Data->Trade->ItemsYou->Contains(dataModels[index]))
+					OgreClient::Singleton->Data->Trade->ItemsYou->Add(dataModels[index]);					
 			}
 		}
 

@@ -1,29 +1,141 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <configuration>
+
+  <!-- 
+    RESOURCES:
+      version: the Download= value from your client's meridian.ini
+      path: folder containing resources in subfolders
+      preloadrooms/..: no need to touch these
+  -->
+  <resources
+    version="10016"
+    path="../../../../Resources/"
+    preloadrooms="false"
+    preloadobjects="false"
+    preloadroomtextures="false"
+    preloadsound="false"
+    preloadmusic="false" />
+
+  <!-- 
+    CONNECTIONS:
+      selectedindex: the 0-based entryindex to use from below
+  -->
+  <connections selectedindex="2">
+    <!-- 
+      CONNECTION:
+        name: just a name for this connection
+        host: DNS or IP of the M59 server
+        port: TCP port of the M59 server 
+        useipv6: if true will use ipv6 to connect
+        stringdictionary: string-resources (get this from the "resource" folder of your client)
+        username: your username
+        password: your password
+        ignorelist: these players will be ignored
+    -->
+    <connection
+      name="101"
+      host="meridian101.meridian59.com"
+      port="5901"
+      useipv6="false"
+      stringdictionary="rsc0000-101.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+    <connection
+      name="102"
+      host="meridian102.meridian59.com"
+      port="5902"
+      useipv6="false"
+      stringdictionary="rsc0000-101.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+    <connection
+      name="103"
+      host="meridian103.openmeridian.org"
+      port="5903"
+      useipv6="false"
+      stringdictionary="rsc0000-103.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+    <connection
+      name="104"
+      host="meridian104.openmeridian.org"
+      port="5904"
+      useipv6="false"
+      stringdictionary="rsc0000-104.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+    <connection
+      name="112"
+      host="arantis.org"
+      port="5912"
+      useipv6="false"
+      stringdictionary="rsc0000-112.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+    <connection
+      name="115"
+      host="proxy03.zyres.net"
+      port="5959"
+      useipv6="false"
+      stringdictionary="rsc0000-115.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+    <connection
+      name="localhost"
+      host="127.0.0.1"
+      port="5959"
+      useipv6="false"
+      stringdictionary="rsc0000-git.rsb"
+      username="user"
+      password=""
+      character="">
+      <ignorelist>
+        <ignore name="PathethicTroll0815" />
+      </ignorelist>
+    </connection>
+  </connections>
+
+  <aliases />
   
   <!-- 
     CONNECTION:
-      host: DNS or IP of the M59 server
-      port: TCP port of the M59 server      
-      rsbfile: string-resources (get this from the "resource" folder of your client)  
-      username: your username
-      password: your password
-      character: your shopcharacter to log in
       majorverson: see client menu help/about
       minorversion: see client menu help/about
-      resourceversion: the Download= value from your client's meridian.ini
       logfile: the bot will log also to this file (cleaned at startup, "" to disable)
   -->
   <connection
-    host="meridian103.openmeridian.org"
-    port="5903"
-    rsbfile="rsc0000-103.rsb"
-    username="username"
-    password="password"
-    character="charactername"
     majorversion="80"
     minorversion="2"
-    resourceversion="10016"
     logfile="bot.log" />
 
   <!--

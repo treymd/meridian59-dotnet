@@ -807,7 +807,7 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public override void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public override void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             base.ResolveStrings(StringResources, RaiseChangedEvent);
 
@@ -932,7 +932,7 @@ namespace Meridian59.Data.Models
         /// </summary>
         /// <param name="TickSpan">Elapsed ms since last call</param>
         /// <param name="RoomInfo">Server sent room information, also has loaded reference to ROO</param>
-        public void UpdatePosition(long TickSpan, RoomInfo RoomInfo)
+        public void UpdatePosition(double TickSpan, RoomInfo RoomInfo)
         {
             if (RoomInfo == null || RoomInfo.ResourceRoom == null)
                 return;
@@ -987,8 +987,8 @@ namespace Meridian59.Data.Models
 
                 // get height at destination from roo
                 // convert to ROO coordinates
-                int xint = Convert.ToInt32((Position3D.X - 64.0f) * 16.0f);
-                int yint = Convert.ToInt32((Position3D.Z - 64.0f) * 16.0f);
+                Real xint = (Position3D.X - 64.0f) * 16.0f;
+                Real yint = (Position3D.Z - 64.0f) * 16.0f;
 
                 // get height from ROO and update subsector reference
                 Real oldheight = Position3D.Y;
@@ -999,8 +999,8 @@ namespace Meridian59.Data.Models
 #else
                 Real newheight = (Flags.IsHanging) ?                   
 #endif
-                    (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, false, false) >> 4) :
-                    (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, true, true) >> 4);
+                    (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, false, false) * 0.0625f) :
+                    (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, true, true) * 0.0625f);
 
                 // see if server overrides this depth type completely
                 // to another sector height
@@ -1058,8 +1058,8 @@ namespace Meridian59.Data.Models
 
             // get height at destination from roo
             // convert to ROO coordinates
-            int xint = Convert.ToInt32((Position3D.X - 64.0f) * 16.0f);
-            int yint = Convert.ToInt32((Position3D.Z - 64.0f) * 16.0f);
+            Real xint = (Position3D.X - 64.0f) * 16.0f;
+            Real yint = (Position3D.Z - 64.0f) * 16.0f;
 
             // get height from ROO
             Real oldheight = Position3D.Y;
@@ -1070,8 +1070,8 @@ namespace Meridian59.Data.Models
 #else
             Real newheight = (Flags.IsHanging) ?
 #endif
-                (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, false, false) >> 4) :
-                (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, true, true) >> 4);
+                (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, false, false) * 0.0625f) :
+                (Real)(RoomInfo.ResourceRoom.GetHeightAt(xint, yint, out subSector, true, true) * 0.0625f);
 
             // see if server overrides this depth type completely
             // to another sector height
@@ -1203,7 +1203,7 @@ namespace Meridian59.Data.Models
         /// </summary>
         /// <param name="Tick"></param>
         /// <param name="Span"></param>
-        public override void Tick(long Tick, long Span)
+        public override void Tick(double Tick, double Span)
         {
             // don't use base or 
             // appearancechanged will be triggered too early
@@ -1632,10 +1632,9 @@ namespace Meridian59.Data.Models
         /// <returns></returns>
         public static Real GetDistanceSquared(RoomObject ObjectA, RoomObject ObjectB)
         {
-            int deltax = ObjectA.CoordinateX - ObjectB.CoordinateX;
-            int deltay = ObjectA.CoordinateY - ObjectB.CoordinateY;
+			V3 AB = ObjectB.Position3D - ObjectA.Position3D;
 
-            return deltax * deltax + deltay * deltay;
+            return AB.LengthSquared;
         }
 
         /// <summary>

@@ -11,6 +11,10 @@ namespace Meridian59 { namespace Ogre
 		Window	= static_cast<CEGUI::Window*>(guiRoot->getChild(UI_NAME_ACTIONBUTTONS_WINDOW));
 		Grid	= static_cast<CEGUI::GridLayoutContainer*>(Window->getChild(UI_NAME_ACTIONBUTTONS_GRID));
 
+		// set window layout from config
+		Window->setPosition(OgreClient::Singleton->Config->UILayoutActionButtons->getPosition());
+		Window->setSize(OgreClient::Singleton->Config->UILayoutActionButtons->getSize());
+
 		// attach listener to actionbutton models
 		OgreClient::Singleton->Data->ActionButtons->ListChanged += 
 			gcnew ListChangedEventHandler(OnActionButtonsListChanged);
@@ -57,7 +61,7 @@ namespace Meridian59 { namespace Ogre
 			// some settings
 			dragger->setSize(size);
 			dragger->setMouseInputPropagationEnabled(false);
-			dragger->setMouseCursor(UI_MOUSECURSOR_TARGET);
+			dragger->setMouseCursor(UI_MOUSECURSOR_HAND);
 			
 			widget->setSize(size2);
 			widget->setPosition(CEGUI::UVector2(CEGUI::UDim(0, 2.5f), CEGUI::UDim(0, 2.5f)));
@@ -217,11 +221,16 @@ namespace Meridian59 { namespace Ogre
 					case AvatarAction::Wave:
 						imgButton->setProperty(UI_PROPNAME_IMAGE, UI_IMAGE_ACTION_WAVE); 
 						break;
+
+					case AvatarAction::GuildInvite:
+						imgButton->setProperty(UI_PROPNAME_IMAGE, UI_IMAGE_ACTION_GUILDINVITE);
+						break;
 				}
 			}
 			else if (dataModel->ButtonType == ActionButtonType::Item)
 			{
-				imageComposers[Index]->DataSource = (InventoryObject^)dataModel->Data;
+				if (dataModel->Data)
+					imageComposers[Index]->DataSource = (InventoryObject^)dataModel->Data;
 			}
 			else if (dataModel->ButtonType == ActionButtonType::Spell)
 			{
@@ -243,7 +252,7 @@ namespace Meridian59 { namespace Ogre
 						StringConvert::CLRToOgre(UI_NAMEPREFIX_STATICICON + spellObject->OverlayFile + "/" + index.ToString());
 
 					// possibly create texture
-					Util::CreateTextureA8R8G8B8(spellObject->Resource->Frames[index], oStrName, UI_RESGROUP_IMAGESETS);
+					Util::CreateTextureA8R8G8B8(spellObject->Resource->Frames[index], oStrName, UI_RESGROUP_IMAGESETS, MIP_DEFAULT);
 
 					// reget TexPtr (no return from function works, ugh..)
 					TexturePtr texPtr = texMan->getByName(oStrName);

@@ -66,6 +66,11 @@ namespace Meridian59.Protocol
         protected ushort serverPort;
 
         /// <summary>
+        /// If true will use IPv6
+        /// </summary>
+        protected bool useIPv6;
+
+        /// <summary>
         /// Handles the TCP connection
         /// </summary>
         protected Socket socket;
@@ -93,7 +98,7 @@ namespace Meridian59.Protocol
         /// <summary>
         /// 
         /// </summary>
-        protected LockingDictionary<uint, string> stringResources;
+		protected StringDictionary stringResources;
 
         /// <summary>
         /// Timer for regularly sending pings in Game ProtocolMode
@@ -162,7 +167,7 @@ namespace Meridian59.Protocol
         /// Constructor.
         /// </summary>
         /// <param name="StringResources">The StringResources to use.</param>
-        public ServerConnection(LockingDictionary<uint, string> StringResources)
+		public ServerConnection(StringDictionary StringResources)
         {           
             // init the queues (receive, send, logs, exceptions)
             ReceiveQueue = new LockingQueue<GameMessage>();
@@ -208,7 +213,8 @@ namespace Meridian59.Protocol
         /// </summary>
         /// <param name="ServerAddr">IP or DNS to connect to</param>
         /// <param name="Port">TCP-Port to connect to</param>
-        public void Connect(string ServerAddr, ushort Port)
+        /// <param name="UseIPv6">If true connection will be made using IPv6 instead of IPv4</param>
+        public void Connect(string ServerAddr, ushort Port, bool UseIPv6 = false)
         {
             // make sure we're disconnected
             Disconnect();
@@ -216,12 +222,14 @@ namespace Meridian59.Protocol
             // save connection settings
             serverAddress = ServerAddr;
             serverPort = Port;
+            useIPv6 = UseIPv6;
 
             // make log entry
             Logger.Log(MODULENAME, LogType.Info, "Connecting to " + serverAddress + ":" + serverPort.ToString());
             
             // Start workthread
             workThread = new Thread(new ThreadStart(ThreadProc));
+            workThread.IsBackground = true;
             workThread.Start();
         }
 
@@ -297,6 +305,9 @@ namespace Meridian59.Protocol
         /// </summary>
         protected void ThreadProc()
         {
+            AddressFamily ipv = useIPv6 ? AddressFamily.InterNetworkV6 : 
+                AddressFamily.InterNetwork;
+            
             // cleanup old socket if any
             if (socket != null)
             {
@@ -315,8 +326,9 @@ namespace Meridian59.Protocol
             while (ExceptionQueue.TryDequeue(out error)) ;
 
             // init a new Socket 
-            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);   
-         
+            socket = new Socket(ipv, SocketType.Stream, ProtocolType.Tcp);
+            socket.NoDelay = true;
+
             // try connect to server
             try { socket.Connect(serverAddress, serverPort); }
             catch (Exception Error) { ExceptionQueue.Enqueue(Error); }

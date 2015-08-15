@@ -31,9 +31,11 @@ namespace Meridian59.Data.Models
         public const string PROPNAME_NAME   = "Name";
         public const string PROPNAME_HOST   = "Host";
         public const string PROPNAME_PORT   = "Port";
+        public const string PROPNAME_USEIPV6 = "UseIPv6";
         public const string PROPNAME_STRINGDICTIONARY   = "StringDictionary";
         public const string PROPNAME_USERNAME           = "Username";
         public const string PROPNAME_PASSWORD           = "Password";
+        public const string PROPNAME_CHARACTER          = "Character";
         public const string PROPNAME_IGNORELIST         = "IgnoreList";
         #endregion
 
@@ -41,9 +43,11 @@ namespace Meridian59.Data.Models
         protected string name;
         protected string host;
         protected ushort port;
+        protected bool useIPv6;
         protected string stringdictionary;
         protected string username;
         protected string password;
+        protected string character;
         protected List<string> ignoreList;
         #endregion
 
@@ -87,6 +91,19 @@ namespace Meridian59.Data.Models
             }
         }
 
+        public bool UseIPv6
+        {
+            get { return useIPv6; }
+            set
+            {
+                if (useIPv6 != value)
+                {
+                    useIPv6 = value;
+                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_USEIPV6));
+                }
+            }
+        }
+
         public string StringDictionary
         {
             get { return stringdictionary; }
@@ -126,6 +143,19 @@ namespace Meridian59.Data.Models
             }
         }
 
+        public string Character
+        {
+            get { return character; }
+            set
+            {
+                if (character != value)
+                {
+                    character = value;
+                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_CHARACTER));
+                }
+            }
+        }
+
         public List<string> IgnoreList
         {
             get { return ignoreList; }
@@ -161,9 +191,12 @@ namespace Meridian59.Data.Models
         public ConnectionInfo(
             string Name, 
             string Host, 
-            ushort Port, 
+            ushort Port,
+            bool UseIPv6,
             string StringDictionary, 
             string Username,
+            string Password,
+            string Character,
             IEnumerable<string> IgnoreList)
         {
             ignoreList = new List<string>();
@@ -171,9 +204,11 @@ namespace Meridian59.Data.Models
             name = Name;
             host = Host;
             port = Port;
+            useIPv6 = UseIPv6;
             stringdictionary = StringDictionary;
             username = Username;
-            password = String.Empty;
+            password = Password;
+            character = Character;
 
             foreach (string s in IgnoreList)
                 ignoreList.Add(s);
@@ -186,9 +221,11 @@ namespace Meridian59.Data.Models
                 Name = String.Empty;
                 Host = String.Empty;
                 Port = DEFAULTPORT;
+                UseIPv6 = false;
                 StringDictionary = String.Empty;
                 Username = String.Empty;
                 Password = String.Empty;
+                Character = String.Empty;
                 IgnoreList.Clear();
             }
             else
@@ -196,9 +233,11 @@ namespace Meridian59.Data.Models
                 name = String.Empty;
                 host = String.Empty;
                 port = DEFAULTPORT;
+                useIPv6 = false;
                 stringdictionary = String.Empty;
                 username = String.Empty;
                 password = String.Empty;
+                character = String.Empty;
                 IgnoreList.Clear();
             }
         }

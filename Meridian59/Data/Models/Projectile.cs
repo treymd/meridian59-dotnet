@@ -596,11 +596,11 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string res_mainoverlayname;
 
-            StringResources.TryGetValue(overlayFileRID, out res_mainoverlayname);
+			StringResources.TryGetValue(overlayFileRID, out res_mainoverlayname);
 
             if (RaiseChangedEvent)
             {           
@@ -675,7 +675,7 @@ namespace Meridian59.Data.Models
             IsMoving = true;
         }
 
-        public void UpdatePosition(long TickSpan, RooFile RooFile)
+        public void UpdatePosition(double TickSpan, RooFile RooFile)
         {
             if (!isMoving)
                 return;
@@ -738,7 +738,7 @@ namespace Meridian59.Data.Models
         /// </summary>
         /// <param name="Tick"></param>
         /// <param name="Span"></param>
-        public void Tick(long Tick, long Span)
+        public void Tick(double Tick, double Span)
         {
             // update animation
             Animation.Tick(Tick, Span);

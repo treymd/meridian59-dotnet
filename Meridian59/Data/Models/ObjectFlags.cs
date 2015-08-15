@@ -36,7 +36,6 @@ namespace Meridian59.Data.Models
     [Serializable]
     public class ObjectFlags : Flags, IUpdatable<ObjectFlags>
     {
-
         //////////////////////////////////////////////////////////////////////////////////
         //////////////////////// IMPLEMENTATION FOR OPENMERIDIAN /////////////////////////
 #if !VANILLA      
@@ -98,7 +97,10 @@ namespace Meridian59.Data.Models
 	    private const uint MM_MONSTER       = 0x00000020; // Default monster dot
 	    private const uint MM_NPC           = 0x00000040; // NPC
 	    private const uint MM_MINION_OTHER  = 0x00000080; // Set if monster is other's minion
-        private const uint MM_MINION_SELF   = 0x00000100; // Set if a monster is our minion   
+        private const uint MM_MINION_SELF   = 0x00000100; // Set if a monster is our minion
+        private const uint MM_TEMPSAFE      = 0x00000200; // Set if player has a temporary angel.
+        private const uint MM_MINIBOSS      = 0x00000400; // Set if mob is a miniboss (survival arena).
+        private const uint MM_BOSS          = 0x00000800; // Set if mob is a boss (survival arena).
         #endregion
 
         #region Enums
@@ -154,7 +156,7 @@ namespace Meridian59.Data.Models
         protected MoveOnType moveon;
 
         /// <summary>
-        /// 
+        /// 32-Bit name color
         /// </summary>
         public uint NameColor
         {
@@ -171,7 +173,7 @@ namespace Meridian59.Data.Models
         }
 
         /// <summary>
-        /// 
+        /// Minimap flags
         /// </summary>
         public uint Minimap
         {
@@ -187,6 +189,57 @@ namespace Meridian59.Data.Models
             }
         }
         
+        /// <summary>
+        /// MoveOnType as embedded in this flags
+        /// </summary>
+        public MoveOnType MoveOn
+        {
+            get { return moveon; }
+
+            set
+            {
+                if (moveon != value)
+                {
+                    moveon = value;
+                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
+                }
+            }
+        }
+
+        /// <summary>
+        /// PlayerType as embedded in this flags
+        /// </summary>
+        public PlayerType Player
+        {
+            get { return player; }
+
+            set
+            {
+                if (player != value)
+                {
+                    player = value;
+                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
+                }
+            }
+        }
+
+        /// <summary>
+        /// DrawingType as embedded in this flags
+        /// </summary>
+        public DrawingType Drawing
+        {
+            get { return drawing; }
+
+            set
+            {
+                if (drawing != value)
+                {
+                    drawing = value;
+                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
+                }
+            }
+        }
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -211,6 +264,21 @@ namespace Meridian59.Data.Models
             player = Player;
             moveon = MoveOn;
         }
+        
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="Buffer"></param>
+        /// <param name="StartIndex"></param>
+        public ObjectFlags(byte[] Buffer, int StartIndex = 0)
+            : base(Buffer, StartIndex) { }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="Buffer"></param>
+        public unsafe ObjectFlags(ref byte* Buffer)
+            : base(ref Buffer) { }
 
         /// <summary>
         /// 
@@ -237,8 +305,7 @@ namespace Meridian59.Data.Models
                 MoveOn = MoveOnType.Yes;
             }
         }
-
-        #region IUpdatable
+       
         /// <summary>
         /// 
         /// </summary>
@@ -268,7 +335,6 @@ namespace Meridian59.Data.Models
                 moveon = Flags.MoveOn;
             }
         }
-        #endregion
 
         #region IByteSerializable
         public override int ByteLength
@@ -362,59 +428,6 @@ namespace Meridian59.Data.Models
 
             Buffer[0] = (byte)moveon;
             Buffer++;
-        }
-        #endregion
-
-        #region Enum properties
-        /// <summary>
-        /// MoveOnType as embedded in this flags
-        /// </summary>
-        public MoveOnType MoveOn
-        {
-            get { return moveon; }
-
-            set
-            {
-                if (moveon != value)
-                {
-                    moveon = value;
-                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
-                }
-            }
-        }
-
-        /// <summary>
-        /// PlayerType as embedded in this flags
-        /// </summary>
-        public PlayerType Player
-        {
-            get { return player; }
-
-            set
-            {
-                if (player != value)
-                {
-                    player = value;
-                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
-                }
-            }
-        }
-
-        /// <summary>
-        /// DrawingType as embedded in this flags
-        /// </summary>
-        public DrawingType Drawing
-        {
-            get { return drawing; }
-
-            set
-            {
-                if (drawing != value)
-                {
-                    drawing = value;
-                    RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
-                }
-            }
         }
         #endregion
 
@@ -681,7 +694,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object is an enemy player.
         /// </summary>
-        public bool IsEnemy
+        public bool IsMinimapEnemy
         {
             get { return (minimap & MM_ENEMY) == MM_ENEMY; }
             set
@@ -696,7 +709,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object is a friendly player.
         /// </summary>
-        public bool IsFriend
+        public bool IsMinimapFriend
         {
             get { return (minimap & MM_FRIEND) == MM_FRIEND; }
             set
@@ -711,7 +724,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object is a guildmate.
         /// </summary>
-        public bool IsGuildMate
+        public bool IsMinimapGuildMate
         {
             get { return (minimap & MM_GUILDMATE) == MM_GUILDMATE; }
             set
@@ -726,7 +739,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the minimap should show buildergroup dot
         /// </summary>
-        public bool IsBuilderGroup
+        public bool IsMinimapBuilderGroup
         {
             get { return (minimap & MM_BUILDER_GROUP) == MM_BUILDER_GROUP; }
             set
@@ -741,7 +754,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object should get a monster minimap dot.
         /// </summary>
-        public bool IsMonster
+        public bool IsMinimapMonster
         {
             get { return (minimap & MM_MONSTER) == MM_MONSTER; }
             set
@@ -771,7 +784,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// Set if a monster is our minion
         /// </summary>
-        public bool IsMinionSelf
+        public bool IsMinimapMinionSelf
         {
             get { return (minimap & MM_MINION_SELF) == MM_MINION_SELF; }
             set
@@ -786,13 +799,58 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// Set if monster is other's minion
         /// </summary>
-        public bool IsMinionOther
+        public bool IsMinimapMinionOther
         {
             get { return (minimap & MM_MINION_OTHER) == MM_MINION_OTHER; }
             set
             {
                 if (value) minimap |= MM_MINION_OTHER;
                 else minimap &= ~MM_MINION_OTHER;
+
+                RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
+            }
+        }
+
+        /// <summary>
+        /// Set if player has a temporary angel.
+        /// </summary>
+        public bool IsMinimapTempSafe
+        {
+            get { return (minimap & MM_TEMPSAFE) == MM_TEMPSAFE; }
+            set
+            {
+                if (value) minimap |= MM_TEMPSAFE;
+                else minimap &= ~MM_TEMPSAFE;
+
+                RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
+            }
+        }
+
+        /// <summary>
+        /// Set if mob is a miniboss (survival arena).
+        /// </summary>
+        public bool IsMinimapMiniBoss
+        {
+            get { return (minimap & MM_MINIBOSS) == MM_MINIBOSS; }
+            set
+            {
+                if (value) minimap |= MM_MINIBOSS;
+                else minimap &= ~MM_MINIBOSS;
+
+                RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
+            }
+        }
+
+        /// <summary>
+        /// Set if mob is a boss (survival arena).
+        /// </summary>
+        public bool IsMinimapBoss
+        {
+            get { return (minimap & MM_BOSS) == MM_BOSS; }
+            set
+            {
+                if (value) minimap |= MM_BOSS;
+                else minimap &= ~MM_BOSS;
 
                 RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_FLAGS));
             }
@@ -816,6 +874,15 @@ namespace Meridian59.Data.Models
                 (player & Flags.Player) == Flags.Player &&
                 (moveon & Flags.MoveOn) == Flags.MoveOn));
         }
+
+        /// <summary>
+        /// True if attackable, not a player and moveon=no
+        /// </summary>     
+        public bool IsCreature
+        {
+            get { return MoveOn == MoveOnType.No && IsAttackable && !IsPlayer; }
+        }
+
 
         //////////////////////////////////////////////////////////////////////////////////
         /////////////////////////// IMPLEMENTATION FOR VANILLA ///////////////////////////
@@ -930,6 +997,21 @@ namespace Meridian59.Data.Models
         /// <param name="Value"></param>
         public ObjectFlags(uint Value = 0)
             : base(Value) { }
+        
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="Buffer"></param>
+        /// <param name="StartIndex"></param>
+        public ObjectFlags(byte[] Buffer, int StartIndex = 0)
+            : base(Buffer, StartIndex) { }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="Buffer"></param>
+        public unsafe ObjectFlags(ref byte* Buffer)
+            : base(ref Buffer) { }
 
         #region SECTION 1 - MoveOnType
         /// <summary>
@@ -1229,7 +1311,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object is an enemy player.
         /// </summary>
-        public bool IsEnemy
+        public bool IsMinimapEnemy
         {
             get { return (flags & OF_ENEMY) == OF_ENEMY; }
             set
@@ -1244,7 +1326,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object is a friendly player.
         /// </summary>
-        public bool IsFriend
+        public bool IsMinimapFriend
         {
             get { return (flags & OF_FRIEND) == OF_FRIEND; }
             set
@@ -1259,7 +1341,7 @@ namespace Meridian59.Data.Models
         /// <summary>
         /// True if the object is a guildmate.
         /// </summary>
-        public bool IsGuildMate
+        public bool IsMinimapGuildMate
         {
             get { return (flags & OF_GUILDMATE) == OF_GUILDMATE; }
             set
@@ -1284,7 +1366,14 @@ namespace Meridian59.Data.Models
             return (Flags == null || ((flags & Flags.Value) == Flags.Value));
         }
 
-        #region IUpdatable
+        /// <summary>
+        /// True if attackable, not a player and moveon=no
+        /// </summary>     
+        public bool IsCreature
+        {
+            get { return MoveOn == MoveOnType.No && IsAttackable && !IsPlayer; }
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -1304,34 +1393,6 @@ namespace Meridian59.Data.Models
                 flags = Flags.Value;
             }
         }
-        #endregion
 #endif
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="Buffer"></param>
-        /// <param name="StartIndex"></param>
-        public ObjectFlags(byte[] Buffer, int StartIndex = 0)
-            : base(Buffer, StartIndex) { }
-
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="Buffer"></param>
-        public unsafe ObjectFlags(ref byte* Buffer)
-            : base(ref Buffer) { }
-    
-        #region COMBINED
-        
-
-        /// <summary>
-        /// True if attackable, not a player and moveon=no
-        /// </summary>     
-        public bool IsCreature
-        {
-            get { return MoveOn == MoveOnType.No && IsAttackable && !IsPlayer; }
-        }
-        #endregion
     }
 }

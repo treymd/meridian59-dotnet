@@ -25,6 +25,8 @@ using Meridian59.Files.ROO;
 using Meridian59.Files.RSB;
 using Meridian59.Data.Lists;
 using Meridian59.Data.Models;
+using System.Threading;
+using Meridian59.Common.Enums;
 
 namespace Meridian59.Files
 {
@@ -33,37 +35,83 @@ namespace Meridian59.Files
     /// </summary>
     public class ResourceManager
     {
+        public class StringEventArgs : EventArgs
+        {
+            public string Value;
+            public StringEventArgs(string Value)
+            {
+                this.Value = Value;
+            }
+        }
+
         #region Constants
         protected const string NOTFOUND = "Error: StringResources file or Bgf/Roo/Wav/Music folder not found.";
         protected const string DEFAULTSTRINGFILE = "rsc0000.rsb";
+
+        public const string SUBPATHSTRINGS = "strings";
+        public const string SUBPATHROOMS = "rooms";
+        public const string SUBPATHROOMTEXTURES = "bgftextures";
+        public const string SUBPATHOBJECTS = "bgfobjects";
+        public const string SUBPATHSOUNDS = "sounds";
+        public const string SUBPATHMUSIC = "music";
+        public const string SUBPATHMAILS = "mails";
+        #endregion
+
+        #region Fields
+		protected readonly StringDictionary stringResources = new StringDictionary();
+        protected readonly LockingDictionary<string, RsbFile> stringDictionaries = new LockingDictionary<string, RsbFile>(StringComparer.OrdinalIgnoreCase);
+        protected readonly LockingDictionary<string, BgfFile> objects = new LockingDictionary<string, BgfFile>(StringComparer.OrdinalIgnoreCase);
+        protected readonly LockingDictionary<string, BgfFile> roomTextures = new LockingDictionary<string, BgfFile>(StringComparer.OrdinalIgnoreCase);
+        protected readonly LockingDictionary<string, RooFile> rooms = new LockingDictionary<string, RooFile>(StringComparer.OrdinalIgnoreCase);
+        protected readonly LockingDictionary<string, Tuple<IntPtr, uint>> sounds = new LockingDictionary<string, Tuple<IntPtr, uint>>(StringComparer.OrdinalIgnoreCase);
+        protected readonly LockingDictionary<string, Tuple<IntPtr, uint>> music = new LockingDictionary<string, Tuple<IntPtr, uint>>(StringComparer.OrdinalIgnoreCase);
+        protected readonly MailList mails = new MailList(200);
+
+        protected readonly LockingQueue<string> queueAsyncFilesLoaded = new LockingQueue<string>();
         #endregion
 
         #region Properties
+        /// <summary>
+        /// Provides the currently active string resources
+        /// </summary>
+		public StringDictionary StringResources { get { return stringResources; } }
 
+        /// <summary>
+        /// All string dictionaries (.rsb) files found
+        /// </summary>
+        public LockingDictionary<string, RsbFile> StringDictionaries { get { return stringDictionaries; } }
+        
         /// <summary>
         /// The dictionary containing all bgf filenames related to objects (no grdXXXX.bgf)
         /// </summary>
-        public LockingDictionary<string, BgfFile> Objects { get; protected set; }
+        public LockingDictionary<string, BgfFile> Objects { get { return objects; } }
 
         /// <summary>
         /// The dictionary containing all bgf filenames related to roomtextures (grdXXXX.bgf)
         /// </summary>
-        public LockingDictionary<string, BgfFile> RoomTextures { get; protected set; }
+        public LockingDictionary<string, BgfFile> RoomTextures { get { return roomTextures; } }
 
         /// <summary>
         /// The dictionary containing the room resources (filenames)
         /// </summary>
-        public LockingDictionary<string, RooFile> Rooms { get; protected set; }
+        public LockingDictionary<string, RooFile> Rooms { get { return rooms; } }
 
         /// <summary>
         /// WAV soundfiles
         /// </summary>
-        public LockingDictionary<string, Tuple<IntPtr, uint>> Wavs { get; protected set; }
+        public LockingDictionary<string, Tuple<IntPtr, uint>> Wavs { get { return sounds; } }
 
         /// <summary>
         /// Music
         /// </summary>
-        public LockingDictionary<string, Tuple<IntPtr, uint>> Music { get; protected set; }
+        public LockingDictionary<string, Tuple<IntPtr, uint>> Music { get { return music; } }
+
+        /// <summary>
+        /// The mail objects.
+        /// Adding or removing entries here will save/delete them also
+        /// from the disk once InitConfig was called.
+        /// </summary>
+        public MailList Mails { get { return mails; } }
 
         /// <summary>
         /// True if InitConfig was executed.
@@ -71,25 +119,72 @@ namespace Meridian59.Files
         public bool Initialized { get; protected set; }
 
         /// <summary>
-        /// Configuration for ResourceManager
+        /// Folder containing all .rsb files for different servers.
         /// </summary>
-        public ResourceManagerConfig Config { get; protected set; }
+        public string StringsFolder { get; set; }
 
         /// <summary>
-        /// Stores the string resources from rsc0000.rsb
+        /// Folder containing all .roo files
         /// </summary>
-        public LockingDictionary<uint, string> StringResources { get; protected set; }
+        public string RoomsFolder { get; set; }
 
         /// <summary>
-        /// The mail objects.
-        /// Adding or removing entries here will save/delete them also
-        /// from the disk once InitConfig was called.
+        /// Folder containing all object BGFs
         /// </summary>
-        public MailList Mails { get; protected set; }
+        public string ObjectsFolder { get; set; }
 
+        /// <summary>
+        /// Folder containing all roomtexture BGFs
+        /// </summary>
+        public string RoomTexturesFolder { get; set; }
+
+        /// <summary>
+        /// Folder containing all WAV soundfiles
+        /// </summary>
+        public string WavFolder { get; set; }
+
+        /// <summary>
+        /// Folder containing music
+        /// </summary>
+        public string MusicFolder { get; set; }
+
+        /// <summary>
+        /// Folder containing mails
+        /// </summary>
+        public string MailFolder { get; set; }
         #endregion
 
+        public event EventHandler PreloadingStarted;
+        public event EventHandler PreloadingEnded;
+        public event EventHandler<StringEventArgs> PreloadingFile;
+
         #region Methods
+        /// <summary>
+        /// Tries to retrieve a RSB file from the Strings dictionary.
+        /// Will load the file from disk, if not yet loaded.
+        /// </summary>
+        /// <param name="File">Plain filename with extension (e.g. rsc0000.rsb)</param>
+        /// <returns></returns>
+        public RsbFile GetStringDictionary(string File)
+        {
+            RsbFile rsbFile = null;
+
+            // if the file is known
+            if (StringDictionaries.TryGetValue(File, out rsbFile))
+            {
+                // haven't loaded it yet?
+                if (rsbFile == null)
+                {
+                    // load it
+                    rsbFile = new RsbFile(StringsFolder + "/" + File);
+
+                    // update the registry                 
+                    StringDictionaries.TryUpdate(File, rsbFile, null);
+                }
+            }
+
+            return rsbFile;
+        }
 
         /// <summary>
         /// Tries to retrieve a BGF file from the Objects dictionary.
@@ -108,7 +203,7 @@ namespace Meridian59.Files
                 if (bgfFile == null)
                 {
                     // load it
-                    bgfFile = new BgfFile(Config.ObjectsFolder + "/" + File);
+                    bgfFile = new BgfFile(ObjectsFolder + "/" + File);
 
                     // update the registry                 
                     Objects.TryUpdate(File, bgfFile, null);
@@ -135,7 +230,7 @@ namespace Meridian59.Files
                 if (rooFile == null)
                 {                  
                     // load it
-                    rooFile = new RooFile(Config.RoomsFolder + "/" + File);
+                    rooFile = new RooFile(RoomsFolder + "/" + File);
 
                     // resolve resource references (may load texture bgfs)
                     rooFile.ResolveResources(this);
@@ -165,7 +260,7 @@ namespace Meridian59.Files
                 if (bgfFile == null)
                 {
                     // load it
-                    bgfFile = new BgfFile(Config.RoomTexturesFolder + "/" + File);
+                    bgfFile = new BgfFile(RoomTexturesFolder + "/" + File);
 
                     // update the registry
                     RoomTextures.TryUpdate(File, bgfFile, null);
@@ -204,7 +299,7 @@ namespace Meridian59.Files
                 if (wavData == null)
                 {
                     // load it
-                    wavData = Util.LoadFileToUnmanagedMem(Config.WavFolder + "/" + File);
+                    wavData = Util.LoadFileToUnmanagedMem(WavFolder + "/" + File);
                     
                     // update the registry
                     Wavs.TryUpdate(File, wavData, null);
@@ -231,7 +326,7 @@ namespace Meridian59.Files
                 if (musicData == null)
                 {
                     // load it
-                    musicData = Util.LoadFileToUnmanagedMem(Config.MusicFolder + "/" + File);
+                    musicData = Util.LoadFileToUnmanagedMem(MusicFolder + "/" + File);
 
                     // update the registry
                     Music.TryUpdate(File, musicData, null);
@@ -267,23 +362,40 @@ namespace Meridian59.Files
         }
 
         /// <summary>
-        /// Initializes the ResourceManager from given config.
+        /// Sets pathes to required resources.
+        /// Will also remove any existing resources from the current lists.
         /// </summary>
-        /// <param name="Config"></param>
-        public void InitConfig(ResourceManagerConfig Config)
+        /// <param name="PathStrings"></param>
+        /// <param name="PathRooms"></param>
+        /// <param name="PathObjects"></param>
+        /// <param name="PathRoomTextures"></param>
+        /// <param name="PathSounds"></param>
+        /// <param name="PathMusic"></param>
+        /// <param name="PathMails"></param>
+        public void Init(
+            string PathStrings,
+            string PathRooms,
+            string PathObjects, 
+            string PathRoomTextures, 
+            string PathSounds, 
+            string PathMusic, 
+            string PathMails)        
         {
-            string[] files;
+            this.StringsFolder = PathStrings;
+            this.RoomsFolder = PathRooms;
+            this.ObjectsFolder = PathObjects;
+            this.RoomTexturesFolder = PathRoomTextures;
+            this.WavFolder = PathSounds;
+            this.MusicFolder = PathMusic;
+            this.MailFolder = PathMails;
 
-            // save new config
-            this.Config = Config;
+            string[] files;
 
             // already executed once?
             if (Initialized)
             {
-                // clear current string dictionary
                 StringResources.Clear();
-
-                // clear current lookup dictionaries
+                StringDictionaries.Clear();
                 Objects.Clear();
                 RoomTextures.Clear();
                 Rooms.Clear();
@@ -297,22 +409,21 @@ namespace Meridian59.Files
                 Mails.Clear();
             }
 
-            // register strings
-            if (File.Exists(Config.StringResourcesFile))
+            // register string dictionaries for different servers
+            if (Directory.Exists(StringsFolder))
             {
-                // load string resources
-                RsbFile rsbFile = new RsbFile(Config.StringResourcesFile);
+                // get available files
+                files = Directory.GetFiles(StringsFolder, '*' + FileExtensions.RSB);
 
-                // add to dictionary
-                foreach (KeyValuePair<uint, string> pair in rsbFile.StringResources)
-                    StringResources.TryAdd(pair.Key, pair.Value);
+                foreach (string s in files)               
+                    StringDictionaries.TryAdd(Path.GetFileName(s), null);               
             }
 
             // register objects
-            if (Directory.Exists(Config.ObjectsFolder))
+            if (Directory.Exists(ObjectsFolder))
             {
                 // get available files
-                files = Directory.GetFiles(Config.ObjectsFolder, '*' + FileExtensions.BGF);
+                files = Directory.GetFiles(ObjectsFolder, '*' + FileExtensions.BGF);
                 
                 foreach (string s in files)
                 {
@@ -324,50 +435,50 @@ namespace Meridian59.Files
             }
 
             // register roomtextures
-            if (Directory.Exists(Config.RoomTexturesFolder))
+            if (Directory.Exists(RoomTexturesFolder))
             {
                 // get available files
-                files = Directory.GetFiles(Config.RoomTexturesFolder, "grd*" + FileExtensions.BGF);
+                files = Directory.GetFiles(RoomTexturesFolder, "grd*" + FileExtensions.BGF);
                 
                 foreach (string s in files)                
                     RoomTextures.TryAdd(Path.GetFileName(s), null);                
             }
 
             // register rooms           
-            if (Directory.Exists(Config.RoomsFolder))
+            if (Directory.Exists(RoomsFolder))
             {
                 // get available files
-                files = Directory.GetFiles(Config.RoomsFolder, '*' + FileExtensions.ROO);
+                files = Directory.GetFiles(RoomsFolder, '*' + FileExtensions.ROO);
                 
                 foreach (string s in files)               
                     Rooms.TryAdd(Path.GetFileName(s), null);              
             }
 
             // register wav sounds          
-            if (Directory.Exists(Config.WavFolder))
+            if (Directory.Exists(WavFolder))
             {
                 // get available files
-                files = Directory.GetFiles(Config.WavFolder, '*' + FileExtensions.WAV);
+                files = Directory.GetFiles(WavFolder, '*' + FileExtensions.WAV);
                 
                 foreach (string s in files)                                
                     Wavs.TryAdd(Path.GetFileName(s), null);                                  
             }
 
             // register music         
-            if (Directory.Exists(Config.MusicFolder))
+            if (Directory.Exists(MusicFolder))
             {
                 // get available files
-                files = Directory.GetFiles(Config.MusicFolder, '*' + FileExtensions.MP3);
+                files = Directory.GetFiles(MusicFolder, '*' + FileExtensions.MP3);
                 
                 foreach (string s in files)                
                     Music.TryAdd(Path.GetFileName(s), null);                                  
             }
 
             // load mails          
-            if (Directory.Exists(Config.MailFolder))
+            if (Directory.Exists(MailFolder))
             {
                 // read available mail files
-                files = Directory.GetFiles(Config.MailFolder, '*' + FileExtensions.XML);
+                files = Directory.GetFiles(MailFolder, '*' + FileExtensions.XML);
                 foreach (string s in files)
                 {
                     // create mail object
@@ -392,33 +503,103 @@ namespace Meridian59.Files
         }
 
         /// <summary>
-        /// Clears and reloads the strings from another dictionary file.
+        /// Clears and reloads the strings from another dictionary file within the strings folder,
+        /// which was previously initialized during Init()
         /// </summary>
-        /// <param name="RsbFile"></param>
-        public void ReloadStrings(string RsbFile)
+        /// <param name="RsbFile">Plain filename, like rsc0000.rsb</param>
+		/// <param name="Language"></param>
+        public void SelectStringDictionary(string RsbFile, LanguageCode Language)
         {
-            // update stringfile
-            Config.StringResourcesFile = RsbFile;
-
             // clear old entries
             StringResources.Clear();
 
-            // check if new string dictionary exists
-            if (File.Exists(Config.StringResourcesFile))
-            {
-                // load string resources
-                RsbFile rsbFile = new RsbFile(Config.StringResourcesFile);
+			// set preferred language
+			StringResources.Language = Language;
 
-                // add to dictionary
-                foreach (KeyValuePair<uint, string> pair in rsbFile.StringResources)
-                    StringResources.TryAdd(pair.Key, pair.Value);
-            }
+            // try get the dictionary for argument
+            RsbFile file = GetStringDictionary(RsbFile);
+            
+            // add to dictionary in use
+            if (file != null)            
+				StringResources.AddRange(file.StringResources);           
         }
 
         /// <summary>
-        /// Preloads all elements in the Objects dictionary.
+        /// Starts preloading resources in several threads.
         /// </summary>
-        public void PreloadObjects()
+        /// <param name="Objects"></param>
+        /// <param name="RoomTextures"></param>
+        /// <param name="Rooms"></param>
+        /// <param name="Sounds"></param>
+        /// <param name="Music"></param>
+        public void Preload(bool Objects, bool RoomTextures, bool Rooms, bool Sounds, bool Music)
+        {
+            Thread threadObjects        = null;
+            Thread threadRoomTextures   = null;
+            Thread threadRooms          = null;
+            Thread threadSounds         = null;
+            Thread threadMusic          = null;
+
+            if (PreloadingStarted != null)
+                PreloadingStarted(this, new EventArgs());
+
+            if (Objects)
+            {
+                threadObjects = new Thread(LoadThreadObjects);
+                threadObjects.Start();          
+            }
+
+            if (RoomTextures)
+            {
+                threadRoomTextures = new Thread(LoadThreadRoomTextures);
+                threadRoomTextures.Start();           
+            }
+
+            if (Rooms)
+            {
+                threadRooms = new Thread(LoadThreadRooms);
+                threadRooms.Start();
+            }
+
+            if (Sounds)
+            {
+                threadSounds = new Thread(LoadThreadSounds);
+                threadSounds.Start();          
+            }
+
+            if (Music)
+            {
+                threadMusic = new Thread(LoadThreadMusic);
+                threadMusic.Start();
+            }
+
+            string filename;
+
+            // lock until all loaders are finished
+            while ( (threadObjects != null && threadObjects.IsAlive) ||
+                    (threadRoomTextures != null && threadRoomTextures.IsAlive) ||
+                    (threadRooms != null && threadRooms.IsAlive) ||
+                    (threadSounds != null && threadSounds.IsAlive) ||
+                    (threadMusic != null && threadMusic.IsAlive))
+            {
+
+                while (queueAsyncFilesLoaded.TryDequeue(out filename))              
+                    if (PreloadingFile != null)
+                        PreloadingFile(this, new StringEventArgs(filename));               
+            }
+
+            while (queueAsyncFilesLoaded.TryDequeue(out filename))
+                if (PreloadingFile != null)
+                    PreloadingFile(this, new StringEventArgs(filename));
+
+            if (PreloadingEnded != null)
+                PreloadingEnded(this, new EventArgs());
+        }
+
+        /// <summary>
+        /// Stars loading all objects in a background thread.
+        /// </summary>
+        protected void LoadThreadObjects()
         {
             IEnumerator<KeyValuePair<string, BgfFile>> it = Objects.GetEnumerator();
             BgfFile file;
@@ -426,20 +607,20 @@ namespace Meridian59.Files
             while (it.MoveNext())
             {
                 // load
-                file = new BgfFile(Path.Combine(Config.ObjectsFolder, it.Current.Key));
+                file = new BgfFile(Path.Combine(ObjectsFolder, it.Current.Key));
                 file.DecompressAll();
 
                 // update
                 Objects.TryUpdate(it.Current.Key, file, null);
-            }
 
-            GC.Collect(2);
+                queueAsyncFilesLoaded.Enqueue(it.Current.Key);
+            }
         }
 
         /// <summary>
-        /// Preloads all elements in the RoomTextures dictionary.
+        /// Stars loading all roomtextures in a background thread.
         /// </summary>
-        public void PreloadRoomTextures()
+        protected void LoadThreadRoomTextures()
         {
             IEnumerator<KeyValuePair<string, BgfFile>> it = RoomTextures.GetEnumerator();
             BgfFile file;
@@ -447,20 +628,20 @@ namespace Meridian59.Files
             while (it.MoveNext())
             {
                 // load
-                file = new BgfFile(Path.Combine(Config.RoomTexturesFolder, it.Current.Key));
+                file = new BgfFile(Path.Combine(RoomTexturesFolder, it.Current.Key));
                 file.DecompressAll();
 
                 // update
                 RoomTextures.TryUpdate(it.Current.Key, file, null);
+                
+                queueAsyncFilesLoaded.Enqueue(it.Current.Key);
             }
-
-            GC.Collect(2);
         }
 
         /// <summary>
-        /// Preloads all elements in the Rooms dictionary.
+        /// Stars loading all rooms in a background thread.
         /// </summary>
-        public void PreloadRooms()
+        protected void LoadThreadRooms()
         {
             IEnumerator<KeyValuePair<string, RooFile>> it = Rooms.GetEnumerator();
             RooFile file;
@@ -468,19 +649,19 @@ namespace Meridian59.Files
             while (it.MoveNext())
             {
                 // load
-                file = new RooFile(Path.Combine(Config.RoomsFolder, it.Current.Key));
-                
+                file = new RooFile(Path.Combine(RoomsFolder, it.Current.Key));
+
                 // update
                 Rooms.TryUpdate(it.Current.Key, file, null);
-            }
 
-            GC.Collect(2);
+                queueAsyncFilesLoaded.Enqueue(it.Current.Key);
+            }
         }
 
         /// <summary>
-        /// Preloads all elements in the Wavs dictionary.
+        /// Stars loading all sounds in a background thread.
         /// </summary>
-        public void PreloadSounds()
+        protected void LoadThreadSounds()
         {
             IEnumerator<KeyValuePair<string, Tuple<IntPtr, uint>>> it = Wavs.GetEnumerator();
             Tuple<IntPtr, uint> wavData = null;
@@ -489,19 +670,19 @@ namespace Meridian59.Files
             {
                 // load it
                 wavData = Util.LoadFileToUnmanagedMem(
-                    Path.Combine(Config.WavFolder, it.Current.Key));
+                    Path.Combine(WavFolder, it.Current.Key));
 
                 // update
                 Wavs.TryUpdate(it.Current.Key, wavData, null);
-            }
 
-            GC.Collect(2);
+                queueAsyncFilesLoaded.Enqueue(it.Current.Key);
+            }
         }
 
         /// <summary>
-        /// Preloads all elements in the Music dictionary.
+        /// Stars loading all music in a background thread.
         /// </summary>
-        public void PreloadMusic()
+        protected void LoadThreadMusic()
         {
             IEnumerator<KeyValuePair<string, Tuple<IntPtr, uint>>> it = Music.GetEnumerator();
             Tuple<IntPtr, uint> mp3Data = null;
@@ -510,13 +691,13 @@ namespace Meridian59.Files
             {
                 // load it
                 mp3Data = Util.LoadFileToUnmanagedMem(
-                    Path.Combine(Config.MusicFolder, it.Current.Key));
+                    Path.Combine(MusicFolder, it.Current.Key));
 
                 // update
                 Music.TryUpdate(it.Current.Key, mp3Data, null);
-            }
 
-            GC.Collect(2);
+                queueAsyncFilesLoaded.Enqueue(it.Current.Key);
+            }
         }
         #endregion
 
@@ -525,18 +706,6 @@ namespace Meridian59.Files
         /// </summary>
         public ResourceManager()
         {
-            // string lookup dictionary
-            StringResources = new LockingDictionary<uint, string>();
-
-            // maillist
-            Mails = new MailList(200);
-
-            // lookup dictionaries for resources
-            Objects = new LockingDictionary<string, BgfFile>(StringComparer.OrdinalIgnoreCase);
-            RoomTextures = new LockingDictionary<string, BgfFile>(StringComparer.OrdinalIgnoreCase);
-            Rooms = new LockingDictionary<string, RooFile>(StringComparer.OrdinalIgnoreCase);
-            Wavs = new LockingDictionary<string, Tuple<IntPtr, uint>>(StringComparer.OrdinalIgnoreCase);
-            Music = new LockingDictionary<string, Tuple<IntPtr, uint>>(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -553,7 +722,7 @@ namespace Meridian59.Files
                 case ListChangedType.ItemAdded:                    
                     // get full path of new mail
                     file = Path.Combine(
-                        Config.MailFolder,
+                        MailFolder,
                         Mails.LastAddedItem.GetFilename());
 
                     // save it
@@ -563,7 +732,7 @@ namespace Meridian59.Files
                 case ListChangedType.ItemDeleted:
                     // get full path of deleted mail
                     file = Path.Combine(
-                        Config.MailFolder,
+                        MailFolder,
                         Mails.LastAddedItem.GetFilename());
 
                     // delete it

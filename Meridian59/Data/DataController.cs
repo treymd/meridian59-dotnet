@@ -152,6 +152,11 @@ namespace Meridian59.Data
         public SkillList AvatarSpells { get; protected set; }
 
         /// <summary>
+        /// The quests list
+        /// </summary>
+        public SkillList AvatarQuests { get; protected set; }
+
+        /// <summary>
         /// Currently active room enchantments
         /// </summary>
         public ObjectBaseList<ObjectBase> RoomBuffs { get; protected set; }
@@ -251,7 +256,7 @@ namespace Meridian59.Data
         /// <summary>
         /// List of received chat messages
         /// </summary>
-        public BaseList<ChatMessage> ChatMessages { get; protected set; }
+        public BaseList<ServerString> ChatMessages { get; protected set; }
 
         /// <summary>
         /// Maximum entries in chat before remove
@@ -424,6 +429,11 @@ namespace Meridian59.Data
         /// Info for the avatar creation wizard.
         /// </summary>
         public CharCreationInfo CharCreationInfo { get; protected set; }
+
+        /// <summary>
+        /// Info for the stat change wizard
+        /// </summary>
+        public StatChangeInfo StatChangeInfo { get; protected set; }
 
         /// <summary>
         /// Whether you're currently resting or not
@@ -611,6 +621,87 @@ namespace Meridian59.Data
         }
 
         /// <summary>
+        /// Returns the delta between maximum vigor (usually 200) and your current vigor or 0 if not known.
+        /// </summary>
+        public int Hunger
+        {
+            get
+            {
+                StatNumeric stat = AvatarCondition.GetItemByNum(StatNums.VIGOR);
+
+                if (stat != null)
+
+                    // note: the absolute maximum value for vigor is saved in ValueRenderMax
+                    // usually 200
+                    return Math.Max(0, stat.ValueRenderMax - stat.ValueCurrent);
+
+                else
+                    return 0;
+            }
+        }
+
+        /// <summary>
+        /// Returns the delta between maximum vigor you can get by resting and your current vigor or 0 if not known.
+        /// </summary>
+        public int Fatigue
+        {
+            get
+            {
+                StatNumeric stat = AvatarCondition.GetItemByNum(StatNums.VIGOR);
+
+                if (stat != null)
+
+                    // note: the maximum value for vigor you get by only resting is saved in ValueMaximum
+                    // usually 80-100 based on second wind
+                    return Math.Max(0, stat.ValueMaximum - stat.ValueCurrent);
+
+                else
+                    return 0;
+            }
+        }
+
+        /// <summary>
+        /// Returns the delta between your maximum hitpoints and your current hitpoints or 0 if not known.
+        /// So this tells you how much you can heal.
+        /// </summary>
+        public int Injury
+        {
+            get
+            {
+                StatNumeric stat = AvatarCondition.GetItemByNum(StatNums.HITPOINTS);
+
+                if (stat != null)
+
+                    // note: the real maximum value of hitpoints you can heal/got is saved in ValueMaximum
+                    // the RenderMaximum refers to 100 by default
+                    return Math.Max(0, stat.ValueMaximum - stat.ValueCurrent);
+
+                else
+                    return 0;
+            }
+        }
+
+        /// <summary>
+        /// Returns the delta between your maximum manapoints and your current manapoints or 0 if not known.
+        /// </summary>
+        public int ManaMissing
+        {
+            get
+            {
+                StatNumeric stat = AvatarCondition.GetItemByNum(StatNums.MANA);
+
+                if (stat != null)
+
+                    // note: the real maximum value of manapoints you can get is saved in ValueMaximum
+                    // the RenderMaximum refers to 100 by default
+                    return Math.Max(0, stat.ValueMaximum - stat.ValueCurrent);
+
+                else
+                    return 0;
+            }
+        }
+
+        /// <summary>
         /// The active actionbuttons / shortcuts.
         /// </summary>
         public ActionButtonList ActionButtons { get; protected set; }
@@ -650,12 +741,13 @@ namespace Meridian59.Data
             AvatarAttributes = new StatNumericList(10);
             AvatarSkills = new SkillList(100);
             AvatarSpells = new SkillList(100);
+            AvatarQuests = new SkillList(100);
             RoomBuffs = new ObjectBaseList<ObjectBase>(30);
             AvatarBuffs = new ObjectBaseList<ObjectBase>(30);
             SpellObjects = new SpellObjectList(100);
             BackgroundOverlays = new BackgroundOverlayList(5);
             PlayerOverlays = new ObjectBaseList<PlayerOverlay>(10);
-            ChatMessages = new BaseList<ChatMessage>(101);
+            ChatMessages = new BaseList<ServerString>(101);
             GameMessageLog = new BaseList<GameMessage>(100);
             VisitedTargets = new List<RoomObject>(50);
             ClickedTargets = new List<uint>(50);
@@ -691,6 +783,7 @@ namespace Meridian59.Data
             WelcomeInfo = new WelcomeInfo();
             CharCreationInfo = new CharCreationInfo();
             ObjectContents = new ObjectContents();
+            StatChangeInfo = new StatChangeInfo();
 
             AdminData = new AdminData();
 
@@ -744,6 +837,7 @@ namespace Meridian59.Data
             AvatarSkills.Clear();
             AvatarSpells.Clear();
             AvatarBuffs.Clear();
+            AvatarQuests.Clear();
             RoomBuffs.Clear();
             SpellObjects.Clear();
             BackgroundOverlays.Clear();
@@ -769,6 +863,7 @@ namespace Meridian59.Data
             ObjectContents.Clear(true);
             GuildShieldInfo.Clear(true);
             AdminData.Clear(true);
+            StatChangeInfo.Clear(true);
 
             // reset values/references
             AvatarObject = null;
@@ -785,7 +880,7 @@ namespace Meridian59.Data
         /// </summary>
         /// <param name="Tick"></param>
         /// <param name="Span"></param>
-        public void Tick(long Tick, long Span)
+        public void Tick(double Tick, double Span)
         {
             // these iterations are backwards to allow
             // removing entries while iterating
@@ -877,7 +972,7 @@ namespace Meridian59.Data
 
                 foreach (RoomObject obj in candidates)
                 {
-                    if ((obj.Flags.IsAttackable || obj.Flags.IsEnemy) && !VisitedTargets.Contains(obj))
+                    if ((obj.Flags.IsAttackable || obj.Flags.IsMinimapEnemy) && !VisitedTargets.Contains(obj))
                         bettercandidates.Add(obj);
                 }
 
@@ -887,7 +982,7 @@ namespace Meridian59.Data
                 {
                     VisitedTargets.Clear();
                     foreach (RoomObject obj in candidates)
-                        if ((obj.Flags.IsAttackable || obj.Flags.IsEnemy))
+                        if ((obj.Flags.IsAttackable || obj.Flags.IsMinimapEnemy))
                             bettercandidates.Add(obj);
                 }
 
@@ -898,7 +993,7 @@ namespace Meridian59.Data
                 RoomObject minObj = null;
                 foreach (RoomObject obj in bettercandidates)
                 {                    
-                    if (obj.Flags.IsEnemy)
+                    if (obj.Flags.IsMinimapEnemy)
                     {
                         // mark found
                         found = true;
@@ -998,6 +1093,44 @@ namespace Meridian59.Data
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Returns the closest attackble roomobject in front of the avatar.
+        /// </summary>
+        /// <returns></returns>
+        public RoomObject ClosestAttackableInFront()
+        {
+            if (RoomInformation.ResourceRoom == null || AvatarObject == null)
+                return null;
+           
+            // get visible objects within distances
+            List<RoomObject> candidates = avatarObject.GetObjectsWithinDistance(RoomObjects, RoomInformation.ResourceRoom,
+                32.0f, 512.0f, false);
+
+            // get the closest
+            Real dist2;
+            Real mindist2 = Real.MaxValue;
+            RoomObject minObj = null;
+
+            foreach (RoomObject obj in candidates)
+            {
+                if (obj.Flags.IsAttackable)
+                {
+                    // get distsquared
+                    dist2 = AvatarObject.GetDistanceSquared(obj);
+
+                    // closer than last candidate?
+                    if (dist2 < mindist2)
+                    {
+                        // save obj and min dist
+                        mindist2 = dist2;
+                        minObj = obj;
+                    }
+                }
+            }
+
+            return minObj;
         }
 
         /// <summary>
@@ -1159,7 +1292,7 @@ namespace Meridian59.Data
                 // look for objects in this sector and update their height
                 foreach (RoomObject obj in RoomObjects)
                 {
-                    if (obj.SubSector != null && obj.SubSector.Sector == e.SectorMove.Sector)
+                    if (obj.SubSector != null && obj.SubSector.Sector == e.Sector)
                         obj.UpdateHeightPosition(RoomInformation);
                 }
             }
@@ -1338,7 +1471,11 @@ namespace Meridian59.Data
                 case MessageTypeGameMode.UserCommand:               // 155
                     HandleUserCommand((UserCommandMessage)Message);
                     break;
-
+#if !VANILLA
+                case MessageTypeGameMode.ReqStatChange:             // 156
+                    HandleReqStatChange((ReqStatChangeMessage)Message);
+                    break;
+#endif
                 case MessageTypeGameMode.PlayWave:                  // 170
                     HandlePlayWave((PlayWaveMessage)Message);
                     break;
@@ -1703,7 +1840,8 @@ namespace Meridian59.Data
                 foreach (ActionButtonConfig button in ActionButtons)
                 {
                     if (button.ButtonType == ActionButtonType.Item &&
-                        button.Name.ToLower() == obj.Name.ToLower())
+                        button.Name.ToLower() == obj.Name.ToLower() &&
+                        button.NumOfSameName == obj.NumOfSameName)
                     {
                         button.SetToItem(obj);
                     }
@@ -1714,6 +1852,18 @@ namespace Meridian59.Data
         protected void HandleInventoryAdd(InventoryAddMessage Message)
         {
             InventoryObjects.Add(Message.NewInventoryObject);
+
+            // look up buttons which are assigned to this item
+            // lookup for items by name is with issues (non unique)!
+            foreach (ActionButtonConfig button in ActionButtons)
+            {
+                if (button.ButtonType == ActionButtonType.Item &&
+                    button.Name.ToLower() == Message.NewInventoryObject.Name.ToLower() &&
+                    button.NumOfSameName == Message.NewInventoryObject.NumOfSameName)
+                {
+                    button.SetToItem(Message.NewInventoryObject);
+                }
+            }
         }
 
         protected void HandleInventoryRemove(InventoryRemoveMessage Message)
@@ -1824,6 +1974,13 @@ namespace Meridian59.Data
                     foreach (Stat stat in Message.Stats)
                         AvatarSpells.Add((StatList)stat);                   
                     break;
+#if !VANILLA
+                case StatGroup.Quests:
+                    AvatarQuests.Clear();
+                    foreach (Stat stat in Message.Stats)
+                        AvatarQuests.Add((StatList)stat);                   
+                    break;
+#endif
             }
         }
 
@@ -1874,6 +2031,16 @@ namespace Meridian59.Data
                         oldSkillEntry.UpdateFromModel(newSkillEntry, true);
                     }
                     break;
+#if !VANILLA
+                case StatGroup.Quests:
+                    newSkillEntry = (StatList)Message.Stat;
+                    oldSkillEntry = AvatarQuests.GetItemByNum(newSkillEntry.Num);
+                    if (oldSkillEntry != null)
+                    {
+                        oldSkillEntry.UpdateFromModel(newSkillEntry, true);
+                    }
+                    break;
+#endif
             }
         }
 
@@ -2029,6 +2196,15 @@ namespace Meridian59.Data
                     break;
             }
         }
+
+#if !VANILLA
+        protected void HandleReqStatChange(ReqStatChangeMessage Message)
+        {
+            // update own instance with new values
+            StatChangeInfo.UpdateFromModel(Message.StatChangeInfo, true);
+            StatChangeInfo.IsVisible = true;
+        }
+#endif
 
         protected void HandleAddBgOverlay(AddBgOverlayMessage Message)
         {

@@ -30,6 +30,8 @@ namespace Meridian59.Data.Models
     {
         public const char DELIMITER = ' ';
         public const char QUOTECHAR = '\"';
+        protected const string ON   = "on";
+        protected const string OFF  = "off";
 
         public abstract ChatCommandType CommandType { get; }
        
@@ -38,25 +40,52 @@ namespace Meridian59.Data.Models
         /// </summary>
         /// <param name="Text">Text input to parse</param>
         /// <param name="DataController">Reference to DataController instance</param>
+        /// <param name="Config">Reference to Config instance</param>
         /// <returns></returns>
-        public static ChatCommand Parse(string Text, DataController DataController)
+        public static ChatCommand Parse(string Text, DataController DataController, Config Config)
         {            
-            string command                  = null;
-            string lower                    = null;
-            string text                     = null;
-            string[] splitted               = null;
-            ChatCommand returnValue         = null;
+            string command          = null;
+            string lower            = null;
+            string text             = null;
+            string alias            = null;
+            string[] splitted       = null;
+            ChatCommand returnValue = null;
             
-            // null check
-            if (Text == null)
+            /**********************************************************************/
+            // checks
+            
+            if (Text == null || DataController == null || Config == null)
                 return null;
 
-            // trim text
             lower = Text.Trim();
 
-            // empty string check
             if (String.Equals(lower, String.Empty))
                 return null;
+
+            /**********************************************************************/
+            // resolve aliases
+
+            int idx = lower.IndexOf(DELIMITER);
+            if (idx == -1)
+            {
+                // only one word which might be an alias
+                KeyValuePairString aliascmd = Config.Aliases.GetItemByKey(lower);
+
+                if (aliascmd != null)
+                    lower = aliascmd.Value;
+            }
+            else
+            {
+                // first word might be alias, but there is more
+                alias = lower.Substring(0, idx);
+
+                KeyValuePairString aliascmd = Config.Aliases.GetItemByKey(alias);
+
+                if (aliascmd != null)
+                    lower = aliascmd.Value + lower.Substring(idx + 1); 
+            }
+
+            /**********************************************************************/
 
             // split up by delimiter
             splitted = lower.Split(DELIMITER);
@@ -67,7 +96,7 @@ namespace Meridian59.Data.Models
 
             // command is first argument
             command = splitted[0];
-            
+
             // select command
             switch (command)
             {
@@ -126,6 +155,16 @@ namespace Meridian59.Data.Models
                     returnValue = ParseCast(splitted, lower, DataController);
                     break;
 
+                case ChatCommandDeposit.KEY1:
+                    if (splitted.Length == 2)
+                    {
+                        uint amount = 0;
+
+                        if (UInt32.TryParse(splitted[1], out amount))
+                            returnValue = new ChatCommandDeposit(amount);
+                    }
+                    break;
+
                 case ChatCommandWithDraw.KEY1:
                     if (splitted.Length == 2)
                     {
@@ -175,6 +214,19 @@ namespace Meridian59.Data.Models
                 case ChatCommandStand.KEY1:
                     returnValue = new ChatCommandStand();
                     break;
+
+                case ChatCommandQuit.KEY1:
+                    returnValue = new ChatCommandQuit();
+                    break;
+#if !VANILLA
+                case ChatCommandTempSafe.KEY1:
+                    returnValue = ParseTempSafe(splitted, lower, DataController);
+                    break;
+
+                case ChatCommandGrouping.KEY1:
+                    returnValue = ParseGrouping(splitted, lower, DataController);
+                    break;
+#endif
             }               
             
             return returnValue;
@@ -226,7 +278,7 @@ namespace Meridian59.Data.Models
                     // empty text
                     else
                     {
-                        Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                        Data.ChatMessages.Add(ServerString.GetServerStringForString(
                             "Can't send empty message."));
                     }
                 }
@@ -234,7 +286,7 @@ namespace Meridian59.Data.Models
                 // no player with that name
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No player with name: " + quote.Item3));
                 }
             }
@@ -269,7 +321,7 @@ namespace Meridian59.Data.Models
                     else
                     {
                         // empty text
-                        Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                        Data.ChatMessages.Add(ServerString.GetServerStringForString(
                             "Can't send empty message."));
                     }
                 }
@@ -277,14 +329,14 @@ namespace Meridian59.Data.Models
                 // still more than one player with max. prefix
                 else if (list.Count > 1)
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "More than one player with prefix: " + prefix));
                 }
 
                 // no player with that prefix
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No player with prefix: " + prefix));
                 }              
             }
@@ -329,7 +381,7 @@ namespace Meridian59.Data.Models
                 // no player with that name
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No player with name: " + quote.Item3));
                 }
             }
@@ -357,14 +409,14 @@ namespace Meridian59.Data.Models
                 // still more than one player with max. prefix
                 else if (list.Count > 1)
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "More than one player with prefix: " + prefix));
                 }
 
                 // no player with that prefix
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No player with prefix: " + prefix));
                 }
             }
@@ -409,7 +461,7 @@ namespace Meridian59.Data.Models
                 // no player with that name
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No player with name: " + quote.Item3));
                 }
             }
@@ -437,14 +489,14 @@ namespace Meridian59.Data.Models
                 // still more than one player with max. prefix
                 else if (list.Count > 1)
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "More than one player with prefix: " + prefix));
                 }
 
                 // no player with that prefix
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No player with prefix: " + prefix));
                 }
             }
@@ -489,7 +541,7 @@ namespace Meridian59.Data.Models
                 // no player with that name
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No spell with name: " + quote.Item3));
                 }
             }
@@ -517,19 +569,87 @@ namespace Meridian59.Data.Models
                 // still more than one player with max. prefix
                 else if (list.Count > 1)
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "More than one spell with prefix: " + prefix));
                 }
 
                 // no spell with that prefix
                 else
                 {
-                    Data.ChatMessages.Add(ChatMessage.GetChatMessageForString(
+                    Data.ChatMessages.Add(ServerString.GetServerStringForString(
                         "No spell with prefix: " + prefix));
                 }
             }
 
             return command;
         }
+
+#if !VANILLA
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Words"></param>
+        /// <param name="Text"></param>
+        /// <param name="Data"></param>
+        /// <returns></returns>
+        protected static ChatCommandTempSafe ParseTempSafe(string[] Words, string Text, DataController Data)
+        {
+            ChatCommandTempSafe command = null;
+
+            if (Words == null || Words.Length < 2)
+                return command;
+
+            string text = String.Join(DELIMITER.ToString(), Words, 1, Words.Length - 1);
+
+            if (text != null)
+                text = text.Trim();
+   
+            switch (text)
+            {
+                case ON:
+                    command = new ChatCommandTempSafe(true);
+                    break;
+
+                case OFF:
+                    command = new ChatCommandTempSafe(false);
+                    break;
+            }
+
+            return command;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Words"></param>
+        /// <param name="Text"></param>
+        /// <param name="Data"></param>
+        /// <returns></returns>
+        protected static ChatCommandGrouping ParseGrouping(string[] Words, string Text, DataController Data)
+        {
+            ChatCommandGrouping command = null;
+
+            if (Words == null || Words.Length < 2)
+                return command;
+
+            string text = String.Join(DELIMITER.ToString(), Words, 1, Words.Length - 1);
+
+            if (text != null)
+                text = text.Trim();
+   
+            switch (text)
+            {
+                case ON:
+                    command = new ChatCommandGrouping(true);
+                    break;
+
+                case OFF:
+                    command = new ChatCommandGrouping(false);
+                    break;
+            }
+
+            return command;
+        }
+#endif
     }
 }

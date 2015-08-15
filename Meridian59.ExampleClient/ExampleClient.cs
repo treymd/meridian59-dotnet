@@ -94,23 +94,7 @@ namespace Meridian59.ExampleClient
 
         private void LoginControl_ConnectRequest(object sender, System.EventArgs e)
         {
-            // load legacy resources before connecting
-            if (!ResourceManager.Initialized)
-            {
-                // initialize the resourcemanagerconfig
-                ResourceManagerConfig config = new ResourceManagerConfig(
-                    Properties.Settings.Default.DownloadVersion,
-                    "resource/rsc0000.rsb",
-                    "resource/rooms",
-                    "resource/objects",
-                    "resource/roomtextures",
-                    "resource/wavs",
-                    "resource/music",
-                    "mail");
-
-                // init the legacy resources
-                ResourceManager.InitConfig(config);
-            }
+            ResourceManager.SelectStringDictionary("rsc0000.rsb");
 
             // start connect to server
             ServerConnection.Connect(MainForm.LoginControl.Hostname, MainForm.LoginControl.Hostport);
@@ -145,7 +129,9 @@ namespace Meridian59.ExampleClient
         /// </summary>
         public override void Init()
         {
-            // no additional code here
+            Config.ResourcesPath = "./resources/";
+
+            base.Init();
         }
 
         /// <summary>

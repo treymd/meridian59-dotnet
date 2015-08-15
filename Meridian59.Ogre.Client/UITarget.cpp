@@ -19,16 +19,13 @@ namespace Meridian59 { namespace Ogre
 		Trade		= static_cast<CEGUI::PushButton*>(Layout->getChild(UI_NAME_TARGET_TRADE));
 		Loot		= static_cast<CEGUI::PushButton*>(Layout->getChild(UI_NAME_TARGET_LOOT));
 
+		// set window layout from config
+		Window->setPosition(OgreClient::Singleton->Config->UILayoutTarget->getPosition());
+		Window->setSize(OgreClient::Singleton->Config->UILayoutTarget->getSize());
+
 		// attach listener to Data
 		OgreClient::Singleton->Data->PropertyChanged += 
 			gcnew PropertyChangedEventHandler(OnDataPropertyChanged);
-        		
-		Inspect->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		Attack->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		Activate->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		Buy->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		Trade->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		Loot->setMouseCursor(UI_MOUSECURSOR_TARGET);
 
 		// image composer for head picture (hotspot=1 is head)
 		imageComposer = gcnew ImageComposerCEGUI<ObjectBase^>();
@@ -114,7 +111,7 @@ namespace Meridian59 { namespace Ogre
 				
 				// set button availability
 				Attack->setEnabled(targetObject->Flags->IsAttackable);
-				Activate->setEnabled(targetObject->Flags->IsActivatable);
+				Activate->setEnabled(targetObject->Flags->IsActivatable || targetObject->Flags->IsContainer);
 				Buy->setEnabled(targetObject->Flags->IsBuyable);
 				Trade->setEnabled(targetObject->Flags->IsOfferable);
 				Loot->setEnabled(targetObject->Flags->IsGettable);
@@ -168,7 +165,7 @@ namespace Meridian59 { namespace Ogre
 				
 			// set button availability
 			Attack->setEnabled(targetObject->Flags->IsAttackable);
-			Activate->setEnabled(targetObject->Flags->IsActivatable);
+			Activate->setEnabled(targetObject->Flags->IsActivatable || targetObject->Flags->IsContainer);
 			Buy->setEnabled(targetObject->Flags->IsBuyable);
 			Trade->setEnabled(targetObject->Flags->IsOfferable);
 			Loot->setEnabled(targetObject->Flags->IsGettable);
@@ -207,8 +204,8 @@ namespace Meridian59 { namespace Ogre
 		const CEGUI::MouseEventArgs& args = static_cast<const CEGUI::MouseEventArgs&>(e);
 
 		// request activate of current target
-		OgreClient::Singleton->SendReqActivate();
-		
+		OgreClient::Singleton->ExecAction(AvatarAction::Activate);
+
 		return true;
 	};
 

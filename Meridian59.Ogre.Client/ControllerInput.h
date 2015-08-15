@@ -30,7 +30,6 @@
 namespace Meridian59 { namespace Ogre
 {	
 	using namespace Meridian59::Data;
-	using namespace Meridian59::Launcher::Models;
 	using namespace Meridian59::Common;
 	using namespace Meridian59::Common::Enums;
 
@@ -57,9 +56,8 @@ namespace Meridian59 { namespace Ogre
 		static OISMouseListener* mouselistener;
 
 		static LPPOINT mouseDownWindowsPosition;
-		static OISKeyBinding^ activeKeyBinding;
-		static long long tickMouseDownLeft;
-		static long long tickMouseDownRight;
+		static double tickMouseDownLeft;
+		static double tickMouseDownRight;
 		static bool isCameraFirstPerson;
 		static bool isInitialized;		
 		static bool isMouseInWindow;
@@ -166,12 +164,11 @@ namespace Meridian59 { namespace Ogre
 		};
 
 		/// <summary>
-        /// Currently loaded keybinding
+        /// Currently loaded keybinding (from OgreClient::Singleton->Config)
         /// </summary>
 		static property OISKeyBinding^ ActiveKeyBinding 
 		{ 
-			public: OISKeyBinding^ get() { return activeKeyBinding; }
-			private: void set(OISKeyBinding^ value) { activeKeyBinding = value; } 
+			public: OISKeyBinding^ get();
 		};
 
 		/// <summary>
@@ -181,7 +178,7 @@ namespace Meridian59 { namespace Ogre
 		{ 
 			bool get() 
 			{ 
-				return oisMouse->getMouseState().buttonDown(OIS::MouseButtonID::MB_Left);
+				return oisMouse && oisMouse->getMouseState().buttonDown(OIS::MouseButtonID::MB_Left);
 			} 
 		};
 
@@ -192,7 +189,7 @@ namespace Meridian59 { namespace Ogre
 		{ 
 			bool get() 
 			{ 
-				return oisMouse->getMouseState().buttonDown(OIS::MouseButtonID::MB_Right); 
+				return oisMouse && oisMouse->getMouseState().buttonDown(OIS::MouseButtonID::MB_Right); 
 			} 
 		};
         
@@ -225,7 +222,7 @@ namespace Meridian59 { namespace Ogre
 		{ 
 			bool get() 
 			{ 
-				return OISKeyboard->isKeyDown(ActiveKeyBinding->Walk); 
+				return oisKeyboard && oisKeyboard->isKeyDown(ActiveKeyBinding->Walk); 
 			} 
 		};
         
@@ -237,10 +234,13 @@ namespace Meridian59 { namespace Ogre
         {
             bool get()
             {
-                if (OISKeyboard->isKeyDown(ActiveKeyBinding->MoveForward) ||
-                    OISKeyboard->isKeyDown(ActiveKeyBinding->MoveBackward) ||
-                    OISKeyboard->isKeyDown(ActiveKeyBinding->MoveLeft) ||
-                    OISKeyboard->isKeyDown(ActiveKeyBinding->MoveRight) ||
+				if (!oisKeyboard)
+					return false;
+
+                if (oisKeyboard->isKeyDown(ActiveKeyBinding->MoveForward) ||
+                    oisKeyboard->isKeyDown(ActiveKeyBinding->MoveBackward) ||
+                    oisKeyboard->isKeyDown(ActiveKeyBinding->MoveLeft) ||
+                    oisKeyboard->isKeyDown(ActiveKeyBinding->MoveRight) ||
                     IsBothMouseDown)
                     return true;
                 else return false;
@@ -254,8 +254,11 @@ namespace Meridian59 { namespace Ogre
         {
             bool get()
             {
-                if (OISKeyboard->isKeyDown(ActiveKeyBinding->RotateLeft) ||
-                    OISKeyboard->isKeyDown(ActiveKeyBinding->RotateRight))
+				if (!oisKeyboard)
+					return false;
+
+                if (oisKeyboard->isKeyDown(ActiveKeyBinding->RotateLeft) ||
+                    oisKeyboard->isKeyDown(ActiveKeyBinding->RotateRight))
                     return true;
                 else return false;
             }
@@ -268,7 +271,10 @@ namespace Meridian59 { namespace Ogre
         {
             bool get()
             {
-                if (OISKeyboard->isKeyDown(ActiveKeyBinding->SelfTarget))
+				if (!oisKeyboard)
+					return false;
+
+                if (oisKeyboard->isKeyDown(ActiveKeyBinding->SelfTarget))
                     return true;
                 else return false;
             }
@@ -279,6 +285,11 @@ namespace Meridian59 { namespace Ogre
         /// </summary>
 		static void Initialize();
 	
+		/// <summary>
+		/// Initialize.
+		/// </summary>
+		static void SetDisplaySize();
+
 		/// <summary>
         /// This is executed by OIS listener once during capture() when mouse button is released.
         /// </summary>
@@ -323,6 +334,6 @@ namespace Meridian59 { namespace Ogre
         /// Call this once per mainthread loop		
 		/// to process input and act accordingly.
         /// </summary>
-        static void Tick(long long Tick, long long Span);
+		static void Tick(double Tick, double Span);
 	};
 };};

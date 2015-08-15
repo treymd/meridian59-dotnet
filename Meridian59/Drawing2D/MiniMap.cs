@@ -15,6 +15,8 @@
 */
 
 using System;
+using Meridian59.Common;
+using Meridian59.Common.Constants;
 using Meridian59.Common.Interfaces;
 using Meridian59.Data;
 using Meridian59.Data.Models;
@@ -36,24 +38,33 @@ namespace Meridian59.Drawing2D
     public abstract class MiniMap<T> : ITickable
     {
         #region Constants
-        public const long UPDATEINVERVALMS = 150;
-        public const Real ZOOMBASE = 4.0f;
-        public const Real DEFAULTZOOM = 1.0f;
+        public const Real DEFAULTZOOM = 4.0f;
         public const Real MINZOOM = 0.05f;
         public const Real MAXZOOM = 20.0f;
-        public const int DEFAULTWIDTH = 256;
+        public const int DEFAULTWIDTH  = 256;
         public const int DEFAULTHEIGHT = 256;
+
+        //                                              AARRGGBB
+        public const uint COLOR_MAP_WALL            = 0xFF000000; //PALETTERGB(0, 0, 0)
+        public const uint COLOR_MAP_PLAYER          = 0xFF0000FF; //PALETTERGB(0, 0, 255)
+        public const uint COLOR_MAP_PLAYER_FRONT    = 0xFF000000; //PALETTERGB(0, 0, 0)      // Pixel at front of player
+        public const uint COLOR_MAP_OBJECT          = 0xFFFF0000; //PALETTERGB(255, 0, 0)    // Red
+        public const uint COLOR_MAP_FRIEND          = 0xFF00FF78; //PALETTERGB(0, 255, 120)  // Green with blue tint
+        public const uint COLOR_MAP_ENEMY           = 0xFFFF0000; //PALETTERGB(255, 0, 0)    // Red
+        public const uint COLOR_MAP_GUILDMATE       = 0xFFFFFF00; //PALETTERGB(255, 255, 0)  // Yellow
+#if !VANILLA        
+        public const uint COLOR_MAP_MINION          = 0xFF00C800; //PALETTERGB(0, 200, 0)    // Green
+        public const uint COLOR_MAP_MINION_OTH      = 0xFF460582; //PALETTERGB(70,5,130)     // Purple
+        public const uint COLOR_MAP_BUILDGRP        = 0xFF00FF00; //PALETTERGB(0, 255, 0)    // Bright Green
+        public const uint COLOR_MAP_NPC             = 0xFF000000; //PALETTERGB(0, 0, 0)      // Black
+        public const uint COLOR_MAP_TEMPSAFE        = 0xFF00AAFF; //PALETTERGB(0,170,255)    // Cyan
+        public const uint COLOR_MAP_MINIBOSS        = 0xFFA042C2; //PALETTERGB(160, 66, 194) // Purple
+        public const uint COLOR_MAP_BOSS            = 0xFF7F0000; //PALETTERGB(127, 0, 0)    // Dark Red
+#endif
         #endregion
 
-        /// <summary>
-        /// Last tick we updated the map picture
-        /// </summary>
-        protected long tickLastUpdate;
-
-        /// <summary>
-        /// Zoom level
-        /// </summary>
         protected Real zoom;
+        protected BoundingBox2D scope;
 
         /// <summary>
         /// Fired when there is an update image to show
@@ -93,6 +104,14 @@ namespace Meridian59.Drawing2D
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        public Real ZoomInv
+        {
+            get { return 1.0f / zoom; }
+        }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="DataController"></param>
@@ -110,97 +129,102 @@ namespace Meridian59.Drawing2D
         /// <summary>
         /// Call regularly from mainthread, will possibly update mapimage and trigger event
         /// </summary>
-        public void Tick(long Tick, long Span)
+        public void Tick(double Tick, double Span)
         {
-            // get elapsed ms since last image draw
-            long msspan = Tick - tickLastUpdate;
+            Real deltax, deltay;
+            Real transx1, transy1, transx2, transy2;
+            RooFile room;
+            RoomObject avatar;
 
-            if (DataController != null && 
-                DataController.AvatarObject != null && 
-                DataController.RoomInformation != null &&
-                DataController.RoomInformation.ResourceRoom != null &&
-                msspan >= UPDATEINVERVALMS)
-            {
-                RooFile RoomFile = DataController.RoomInformation.ResourceRoom;
+            // basic checks
+            if (DataController == null ||
+                DataController.AvatarObject == null ||
+                DataController.RoomInformation == null ||
+                DataController.RoomInformation.ResourceRoom == null)
+                    return;
 
-                // get the deltas based on zoom, zoombase and mapsize
-                // the center of the bounding box is the player position
-                Real deltax = Zoom * ZOOMBASE * (Real)Width;
-                Real deltay = Zoom * ZOOMBASE * (Real)Height;
+            /***************************************************************************/
 
-                // the top left corner of bounding box
-                int topx = Convert.ToInt32((Real)DataController.AvatarObject.CoordinateX - deltax);
-                int topy = Convert.ToInt32((Real)DataController.AvatarObject.CoordinateY - deltay);
+            room   = DataController.RoomInformation.ResourceRoom;
+            avatar = DataController.AvatarObject;
 
-                // bottom right corner of bounding box
-                int bottomx = Convert.ToInt32((Real)DataController.AvatarObject.CoordinateX + deltax);
-                int bottomy = Convert.ToInt32((Real)DataController.AvatarObject.CoordinateY + deltay);
-               
-                // get scale between actual pixelsize of image to show and the bounding box
-                Real boxscale = (Real)Width / (Real)(bottomx - topx);
+            // get the deltas based on zoom, zoombase and mapsize
+            // the center of the bounding box is the player position
+            deltax = 0.5f * zoom * (Real)Width;
+            deltay = 0.5f * zoom * (Real)Height;
 
-                // prepare drawing
-                PrepareDraw();
+            // update box boundaries (box = what to draw from map)
+            scope.Min.X = avatar.Position3D.X - deltax;
+            scope.Min.Y = avatar.Position3D.Z - deltay;
+            scope.Max.X = avatar.Position3D.X + deltax;
+            scope.Max.Y = avatar.Position3D.Z + deltay;
+
+            // prepare drawing
+            PrepareDraw();
             
-                // start drawing lines from roo
-                foreach (RooWall rld in RoomFile.Walls)
+            /***************************************************************************/
+                
+            // start drawing walls from roo
+            foreach (RooWall rld in room.Walls)
+            {
+                // Don't show line if:
+                // 1) both sides not set
+                // 2) left side set to not show up on map, right side unset
+                // 3) right side set to not show up on map, left side unset
+                // 4) both sides set and set to not show up on map
+                if ((rld.LeftSide == null && rld.RightSide == null) ||
+                    (rld.LeftSide != null && rld.RightSide == null && rld.LeftSide.Flags.IsMapNever) ||
+                    (rld.LeftSide == null && rld.RightSide != null && rld.RightSide.Flags.IsMapNever) ||
+                    (rld.LeftSide != null && rld.LeftSide != null && rld.LeftSide.Flags.IsMapNever && rld.RightSide.Flags.IsMapNever))
+                    continue;
+                   
+                // transform wall points
+                transx1 = (rld.P1.X * 0.0625f + 64f - scope.Min.X) * ZoomInv;
+                transy1 = (rld.P1.Y * 0.0625f + 64f - scope.Min.Y) * ZoomInv;
+                transx2 = (rld.P2.X * 0.0625f + 64f - scope.Min.X) * ZoomInv;
+                transy2 = (rld.P2.Y * 0.0625f + 64f - scope.Min.Y) * ZoomInv;
+
+                // draw wall
+                DrawWall(rld, transx1, transy1, transx2, transy2);
+            }
+
+            /***************************************************************************/
+                
+            // draw roomobjects
+            foreach (RoomObject obj in DataController.RoomObjects)
+            {
+                transx1 = (obj.Position3D.X - scope.Min.X) * ZoomInv;
+                transy1 = (obj.Position3D.Z - scope.Min.Y) * ZoomInv;
+
+                if (!obj.IsAvatar)
                 {
-                    // Don't proceed if:
-                    // 1) line has no sides
-                    // 2) both sides are flagged to not be shown on map
-                    if ((rld.LeftSideReference == 0 && rld.RightSideReference == 0) ||
-                        ((rld.LeftSideReference > 0 && RoomFile.SideDefs[rld.LeftSideReference - 1].Flags.IsMapNever) &&
-                        (rld.RightSideReference > 0 && RoomFile.SideDefs[rld.RightSideReference - 1].Flags.IsMapNever)))
-                        continue;
-
-                    // convert to traffic-coords (/16 is RSHIFT 4, +64 offset):
-                    int x1 = (rld.X1 >> 4) + 64;
-                    int y1 = (rld.Y1 >> 4) + 64;
-                    int x2 = (rld.X2 >> 4) + 64;
-                    int y2 = (rld.Y2 >> 4) + 64;
-
-                    // expressions whether point is in rectangle
-                    bool isX1inScope = (x1 >= topx && x1 <= bottomx);
-                    bool isY1inScope = (y1 >= topy && y1 <= bottomy);
-                    bool isX2inScope = (x2 >= topx && x2 <= bottomx);
-                    bool isY2inScope = (y2 >= topy && y2 <= bottomy);
-
-                    // if at least one of the line points is in the mapscope, draw the line
-                    if ((isX1inScope && isY1inScope) || (isX2inScope && isY2inScope))
-                    {
-                        // transform points to match world of pixeldrawing
-                        Real transx1 = (x1 - topx) * boxscale;
-                        Real transy1 = (y1 - topy) * boxscale;
-                        Real transx2 = (x2 - topx) * boxscale;
-                        Real transy2 = (y2 - topy) * boxscale;
-
-                        // draw wall
-                        DrawWall(rld, transx1, transy1, transx2, transy2);
-                    }
-                }
-
-                // draw roomobjects
-                foreach (RoomObject obj in DataController.RoomObjects)
-                {
-                    Real objx = (obj.CoordinateX - topx) * boxscale;
-                    Real objy = (obj.CoordinateY - topy) * boxscale;
-                    int width = Convert.ToInt32(50.0f * boxscale);
-                    Real widthhalf = (Real)width / 2.0f;
-                    int rectx = Convert.ToInt32((Real)objx - widthhalf);
-                    int recty = Convert.ToInt32((Real)objy - widthhalf);
+                    Real width = 50.0f * ZoomInv;
+                    Real widthhalf = width / 2.0f;
+                    Real rectx = transx1 - widthhalf;
+                    Real recty = transy1 - widthhalf;
 
                     DrawObject(obj, rectx, recty, width, width);
                 }
-                
+                else
+                {
+                    V2 pos   = new V2(transx1, transy1);
+                    V2 line1 = MathUtil.GetDirectionForRadian(obj.Angle) * 50.0f * ZoomInv;
+                    V2 line2 = line1.Clone();
+                    V2 line3 = line1.Clone();
 
-                FinishDraw();
-               
-                // trigger event
-                RaiseImageChanged();
+                    line2.Rotate(GeometryConstants.HALFPERIOD - 0.5f);
+                    line3.Rotate(-GeometryConstants.HALFPERIOD + 0.5f);
 
-                // save this update tick
-                tickLastUpdate = Tick;
+                    DrawAvatar(obj, pos + line1, pos + line2, pos + line3);
+                }                
             }
+
+            /***************************************************************************/
+                
+            FinishDraw();
+               
+            // trigger event
+            RaiseImageChanged();         
         }
 
         /// <summary>
@@ -243,6 +267,15 @@ namespace Meridian59.Drawing2D
         /// <param name="width"></param>
         /// <param name="height"></param>
         public abstract void DrawObject(RoomObject RoomObject, Real x, Real y, Real width, Real height);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="RoomObject"></param>
+        /// <param name="P1">Triangle point 1</param>
+        /// <param name="P2">Triangle point 2</param>
+        /// <param name="P3">Triangle point 3</param>
+        public abstract void DrawAvatar(RoomObject RoomObject, V2 P1, V2 P2, V2 P3);
 
         /// <summary>
         /// Triggers ImageChanged event

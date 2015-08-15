@@ -13,6 +13,10 @@ namespace Meridian59 { namespace Ogre
 		Enchantments	= static_cast<CEGUI::GridLayoutContainer*>(Window->getChild(UI_NAME_AVATAR_ENCHANTMENTS));
 		Conditions		= static_cast<CEGUI::VerticalLayoutContainer*>(Window->getChild(UI_NAME_AVATAR_CONDITIONS));
 
+		// set window layout from config
+		Window->setPosition(OgreClient::Singleton->Config->UILayoutAvatar->getPosition());
+		Window->setSize(OgreClient::Singleton->Config->UILayoutAvatar->getSize());
+
 		// attach listener to Data
 		OgreClient::Singleton->Data->PropertyChanged += 
 			gcnew PropertyChangedEventHandler(OnDataPropertyChanged);
@@ -30,9 +34,6 @@ namespace Meridian59 { namespace Ogre
 
 		// set dimension (no. of items per row and no. of cols)
 		Enchantments->setGridDimensions(UI_AVATAR_ENCHANTMENTS_COLS, UI_AVATAR_ENCHANTMENTS_ROWS);
-		
-		// set mousecursor on avatar to target
-		Head->setMouseCursor(UI_MOUSECURSOR_TARGET);
 
 		// image composer for head picture
 		imageComposerHead = gcnew ImageComposerCEGUI<RoomObject^>();
@@ -214,7 +215,7 @@ namespace Meridian59 { namespace Ogre
 			// set tooltip to name and mousecursor to target
 			imgButton->setID(buffObject->ID);
 			imgButton->setTooltipText(StringConvert::CLRToCEGUI(buffObject->Name));
-			imgButton->setMouseCursor(UI_MOUSECURSOR_TARGET);		
+			imgButton->setMouseCursor(UI_MOUSECURSOR_HAND);		
 		}
 	};
 
@@ -341,7 +342,7 @@ namespace Meridian59 { namespace Ogre
 						StringConvert::CLRToOgre(UI_NAMEPREFIX_STATICICON + condition->ResourceName + "/0");
 
 					// possibly create texture
-					Util::CreateTextureA8R8G8B8(condition->Resource->Frames[0], oStrName, UI_RESGROUP_IMAGESETS);
+					Util::CreateTextureA8R8G8B8(condition->Resource->Frames[0], oStrName, UI_RESGROUP_IMAGESETS, MIP_DEFAULT);
 
 					// reget TexPtr (no return from function works, ugh..)
 					TexturePtr texPtr = texMan->getByName(oStrName);

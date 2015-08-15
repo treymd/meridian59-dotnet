@@ -951,13 +951,13 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public virtual void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public virtual void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string res_name;
             string res_mainoverlayname;
 
-            StringResources.TryGetValue(nameRID, out res_name);
-            StringResources.TryGetValue(overlayFileRID, out res_mainoverlayname);
+			StringResources.TryGetValue(nameRID, out res_name);
+			StringResources.TryGetValue(overlayFileRID, out res_mainoverlayname);
 
             if (RaiseChangedEvent)
             {
@@ -1078,7 +1078,7 @@ namespace Meridian59.Data.Models
         /// </summary>
         /// <param name="Tick"></param>
         /// <param name="Span"></param>
-        public virtual void Tick(long Tick, long Span)
+        public virtual void Tick(double Tick, double Span)
         {
             // update animation
             Animation.Tick(Tick, Span);

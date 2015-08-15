@@ -42,12 +42,26 @@ namespace Meridian59 { namespace Ogre
 		
 		::System::Drawing::Color backgroundColor;
 		::System::Drawing::Graphics^ g;
-        ::System::Drawing::Pen^ wallPen;
-        ::System::Drawing::SolidBrush^ purpleBrush;
-        ::System::Drawing::SolidBrush^ redBrush;
-        ::System::Drawing::SolidBrush^ blueBrush;
-        ::System::Drawing::SolidBrush^ greenBrush;
-        ::System::Drawing::SolidBrush^ orangeBrush;
+        
+		::System::Drawing::Pen^ penWall;
+		
+		::System::Drawing::SolidBrush^ brushPlayer;
+        ::System::Drawing::SolidBrush^ brushObject;
+        ::System::Drawing::SolidBrush^ brushFriend;
+        ::System::Drawing::SolidBrush^ brushEnemy;
+        ::System::Drawing::SolidBrush^ brushGuildMate;
+
+#if !VANILLA
+		::System::Drawing::SolidBrush^ brushMinion;
+		::System::Drawing::SolidBrush^ brushMinionOther;
+		::System::Drawing::SolidBrush^ brushBuildGroup;
+		::System::Drawing::SolidBrush^ brushNPC;
+		::System::Drawing::SolidBrush^ brushTempSafe;
+		::System::Drawing::SolidBrush^ brushMiniBoss;
+		::System::Drawing::SolidBrush^ brushBoss;
+#endif
+
+		array<::System::Drawing::PointF>^ playerArrowPts;
 
 		void RecreateImageAndGraphics();
 
@@ -57,12 +71,13 @@ namespace Meridian59 { namespace Ogre
 		/// <summary>
         /// Constructor
         /// </summary>
-		MiniMapCEGUI(::Meridian59::Data::DataController^ Data, int Width, int Height);
+		MiniMapCEGUI(::Meridian59::Data::DataController^ Data, int Width, int Height, CLRReal Zoom);
 
 		virtual void SetDimension(int Width, int Height) override;
 		virtual void PrepareDraw() override;
 		virtual void DrawWall(RooWall^ Wall, CLRReal x1, CLRReal y1, CLRReal x2, CLRReal y2) override;
 		virtual void DrawObject(RoomObject^ RoomObject, CLRReal x, CLRReal y, CLRReal width, CLRReal height) override;
+		virtual void DrawAvatar(RoomObject^ RoomObject, V2 P1, V2 P2, V2 P3) override;
 		virtual void FinishDraw() override;
 	};
 

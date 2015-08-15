@@ -9,7 +9,6 @@ namespace Meridian59 { namespace Ogre
 		oisMouse			= nullptr;	
 		keylistener			= nullptr;
 		mouselistener		= nullptr;
-		activeKeyBinding	= nullptr;
 
 		tickMouseDownLeft	= 0;
 		tickMouseDownRight	= 0;
@@ -40,9 +39,6 @@ namespace Meridian59 { namespace Ogre
 
 	void ControllerInput::Initialize()
 	{	
-		// load OIS binding from Config binding
-		activeKeyBinding = OISKeyBinding::FromKeyBinding(OgreClient::Singleton->Config->KeyBinding);
-
 		std::ostringstream windowHndStr;
 		windowHndStr << (size_t)OgreClient::Singleton->RenderWindowHandle;
 		
@@ -55,10 +51,9 @@ namespace Meridian59 { namespace Ogre
         InputManager = OIS::InputManager::createInputSystem(oisParameters);
         OISKeyboard	 = (OIS::Keyboard*)InputManager->createInputObject(OIS::Type::OISKeyboard, true);
         OISMouse	 = (OIS::Mouse*)InputManager->createInputObject(OIS::Type::OISMouse, true);
-       
-        const OIS::MouseState &mouseState = OISMouse->getMouseState();
-		mouseState.width = OgreClient::Singleton->Viewport->getActualWidth();
-        mouseState.height = OgreClient::Singleton->Viewport->getActualHeight();
+
+		// sets boundaries for mouse from current viewport
+		SetDisplaySize();
 
         // setup callbacks for keyboard and mouse events	
 		keylistener = new OISKeyListener();
@@ -82,7 +77,7 @@ namespace Meridian59 { namespace Ogre
 			{	
 				// remove eventcallback
 				oisKeyboard->setEventCallback(0);
-				
+
 				// destroy keyboard (will also free)
 				inputManager->destroyInputObject(oisKeyboard);
 			}
@@ -111,7 +106,6 @@ namespace Meridian59 { namespace Ogre
 		oisMouse			= nullptr;
 		keylistener			= nullptr;
 		mouselistener		= nullptr;
-		activeKeyBinding	= nullptr;
 
 		tickMouseDownLeft	= 0;
 		tickMouseDownRight	= 0;
@@ -141,6 +135,18 @@ namespace Meridian59 { namespace Ogre
 		// mark not initialized
 		IsInitialized = false;
     };
+	
+	void ControllerInput::SetDisplaySize()
+	{
+		const OIS::MouseState &mouseState = OISMouse->getMouseState();
+		mouseState.width = OgreClient::Singleton->Viewport->getActualWidth();
+		mouseState.height = OgreClient::Singleton->Viewport->getActualHeight();
+	};
+
+	OISKeyBinding^ ControllerInput::ActiveKeyBinding::get()
+	{
+		return OgreClient::Singleton->Config->KeyBinding;
+	};
 
 	void ControllerInput::PerformMouseOver(int MouseX, int MouseY, bool IsClick)
 	{
@@ -150,7 +156,7 @@ namespace Meridian59 { namespace Ogre
 
         // create ray & query                      
 		Ray ray = OgreClient::Singleton->Camera->getCameraToViewportRay(scrx, scry);                       
-        RaySceneQuery* query = OgreClient::Singleton->SceneManager->createRayQuery(ray);                       
+		RaySceneQuery* query = OgreClient::Singleton->SceneManager->createRayQuery(ray, 0xFFFFFFFF);
         
 		// make it also find billboards and sort by distance
 		query->setQueryTypeMask(0xFFFFFFFF);
@@ -182,7 +188,7 @@ namespace Meridian59 { namespace Ogre
 					// try parse an id out of name string
 					unsigned int objectid;
 					System::UInt32::TryParse(s->Substring(s->LastIndexOf('/') + 1), objectid);
-                          
+                       
 					if (objectid > 0)	
 					{
 						RoomObject^ obj = OgreClient::Singleton->Data->RoomObjects->GetItemByID(objectid);
@@ -252,7 +258,8 @@ namespace Meridian59 { namespace Ogre
 	bool ControllerInput::OISMouse_MouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     {		
 		// exit conditions
-		if (OgreClient::Singleton->Data->IsWaiting || 
+		if (OgreClient::Singleton->Data->IsWaiting ||
+			!OgreClient::Singleton->RenderWindow ||
 			!OgreClient::Singleton->RenderWindow->isVisible() ||
 			!OgreClient::Singleton->RenderWindow->isActive() ||
 			!OgreClient::Singleton->HasFocus ||
@@ -262,6 +269,10 @@ namespace Meridian59 { namespace Ogre
 		// inject mouseup to cegui
 		ControllerUI::InjectMouseButtonUp(GetCEGUIMouseButton(id));
 		
+		// below here must be in playing mode (no login etc.)
+		if (OgreClient::Singleton->Data->UIMode != UIMode::Playing)
+			return true;
+
 		// perform leftclick select
         if (id == OIS::MouseButtonID::MB_Left &&
 			!isMouseWentDownOnUI && 
@@ -282,7 +293,7 @@ namespace Meridian59 { namespace Ogre
 			OgreClient::Singleton->Data->IsNextAttackApplyCastOnHighlightedObject = true;
 
 			// activate the mapped acton for rightlicck
-			OgreClient::Singleton->Data->ActionButtons[activeKeyBinding->RightClickAction - 1]->Activate();		
+			OgreClient::Singleton->Data->ActionButtons[ActiveKeyBinding->RightClickAction - 1]->Activate();		
 		}
 
 		isMouseWentDownOnUI = false;
@@ -293,7 +304,8 @@ namespace Meridian59 { namespace Ogre
 	bool ControllerInput::OISMouse_MousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     {   
 		// exit conditions
-		if (OgreClient::Singleton->Data->IsWaiting || 
+		if (OgreClient::Singleton->Data->IsWaiting ||
+			!OgreClient::Singleton->RenderWindow ||
 			!OgreClient::Singleton->RenderWindow->isVisible() ||
 			!OgreClient::Singleton->RenderWindow->isActive() ||
 			!OgreClient::Singleton->HasFocus ||
@@ -316,10 +328,12 @@ namespace Meridian59 { namespace Ogre
 		if (id == OIS::MouseButtonID::MB_Right)
 			tickMouseDownRight = OgreClient::Singleton->GameTick->Current;
 
+		/******************************************************/
+
 		// rightclick: resync the avatars orientation to the camera lookat (on x,z)
-		if (id == OIS::MouseButtonID::MB_Right && !isMouseWentDownOnUI)        
+		if (IsRightMouseDown && !isMouseWentDownOnUI)
 			SetAvatarOrientationFromCamera();
-        		
+
 		// stop automove on manual forward/backward
 		if (isAutoMove && 
 			oisMouse->getMouseState().buttonDown(OIS::MouseButtonID::MB_Left) &&
@@ -338,6 +352,11 @@ namespace Meridian59 { namespace Ogre
 		int dx = arg.state.X.rel;
 		int dy = arg.state.Y.rel;
 		int dz = arg.state.Z.rel;
+		
+		if (dx == 0 && dy == 0 && dz == 0)
+			return true;
+
+		bool isAiming = false;
 
 		// update flag whether mouse is in window or not
 		IsMouseInWindow = (
@@ -359,7 +378,8 @@ namespace Meridian59 { namespace Ogre
 		}
 
 		// exit conditions
-		if (!OgreClient::Singleton->RenderWindow->isVisible() ||
+		if (!OgreClient::Singleton->RenderWindow ||
+			!OgreClient::Singleton->RenderWindow->isVisible() ||
 			!OgreClient::Singleton->RenderWindow->isActive() ||
 			!OgreClient::Singleton->HasFocus ||
 			!isMouseInWindow)
@@ -371,94 +391,109 @@ namespace Meridian59 { namespace Ogre
 		// the cameranode
 		SceneNode* cameraNode = OgreClient::Singleton->CameraNode;
 
-		// exit conditions for aiming
+		// exit conditions for 'actual playing' e.g. with avatar set
 		if (OgreClient::Singleton->Data->IsWaiting || 
 			Avatar == nullptr ||                
             Avatar->SceneNode == nullptr ||
-			cameraNode == nullptr ||
-			isMouseWentDownOnUI)
+			cameraNode == nullptr)
 			return true;
 
-		// there is a small delay until aiming starts, to not shackle the
-		// camera with any short mouseclick
-		long long dtRightButton = OgreClient::Singleton->GameTick->Current - tickMouseDownRight;
-		long long dtLeftButton = OgreClient::Singleton->GameTick->Current - tickMouseDownLeft;
+		if (!isMouseWentDownOnUI)
+		{
+			// there is a small delay until aiming starts, to not shackle the
+			// camera with any short mouseclick
+			double dtRightButton = OgreClient::Singleton->GameTick->Current - tickMouseDownRight;
+			double dtLeftButton = OgreClient::Singleton->GameTick->Current - tickMouseDownLeft;
 
-		// right mousebutton (or both) pressed and dleay for mouseaim exceeded
-		if (IsRightMouseDown && dtRightButton > MOUSELOOKMINDELAY)
-		{				
-			if (dx != 0)					    
-			{
-				// stop immediately if we switched directions
-				if (::System::Math::Sign(dx) != ::System::Math::Sign(avatarYawDelta))
-					avatarYawDelta = 0.0f;
+			// right mousebutton (or both) pressed and dleay for mouseaim exceeded
+			if (IsRightMouseDown && dtRightButton > MOUSELOOKMINDELAY)
+			{				
+				if (dx != 0)					    
+				{
+					// stop immediately if we switched directions
+					if (::System::Math::Sign(dx) != ::System::Math::Sign(avatarYawDelta))
+						avatarYawDelta = 0.0f;
 
-				// set a new delta and stepsize
-				// this will be processed tick based
-				avatarYawDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dx;
-				avatarYawStep = MOUSELOOKSTEPFACT * avatarYawDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
+					// set a new delta and stepsize
+					// this will be processed tick based
+					avatarYawDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dx;
+					avatarYawStep = MOUSELOOKSTEPFACT * avatarYawDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
+
+					isAiming = true;
+				}
+
+				if (dy != 0)
+				{
+					// invert mouse y if enabled in config
+					if (OgreClient::Singleton->Config->InvertMouseY)
+						dy = -dy;
+
+					// stop immediately if we switched directions
+					if (::System::Math::Sign(dy) != ::System::Math::Sign(cameraPitchDelta))
+						cameraPitchDelta = 0.0f;
+
+					// set a new delta and stepsize
+					// this will be processed tick based
+					cameraPitchDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dy;
+					cameraPitchStep = MOUSELOOKSTEPFACT * cameraPitchDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
+
+					isAiming = true;
+				}
 			}
 
-			if (dy != 0)
-			{
-				// stop immediately if we switched directions
-				if (::System::Math::Sign(dy) != ::System::Math::Sign(cameraPitchDelta))
-					cameraPitchDelta = 0.0f;
+			// left mousebutton pressed and delay for mouseaim exceeded
+			else if (IsLeftMouseDown && dtLeftButton > MOUSELOOKMINDELAY)
+			{                    
+				if (dx != 0)
+				{
+					// stop immediately if we switched directions
+					if (::System::Math::Sign(dx) != ::System::Math::Sign(cameraYawDelta))
+						cameraYawDelta = 0.0f;
 
-				// set a new delta and stepsize
-				// this will be processed tick based
-				cameraPitchDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dy;
-				cameraPitchStep = MOUSELOOKSTEPFACT * cameraPitchDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
-			}
-		}
+					// set a new delta and stepsize
+					// this will be processed tick based
+					cameraYawDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dx;
+					cameraYawStep = MOUSELOOKSTEPFACT * cameraYawDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
 
-		// left mousebutton pressed and delay for mouseaim exceeded
-		else if (IsLeftMouseDown && dtLeftButton > MOUSELOOKMINDELAY)
-		{                    
-			if (dx != 0)
-			{
-				// stop immediately if we switched directions
-				if (::System::Math::Sign(dx) != ::System::Math::Sign(cameraYawDelta))
-					cameraYawDelta = 0.0f;
-
-				// set a new delta and stepsize
-				// this will be processed tick based
-				cameraYawDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dx;
-				cameraYawStep = MOUSELOOKSTEPFACT * cameraYawDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
-			}
+					isAiming = true;
+				}
 	
-			if (dy != 0)
-			{	
-				// stop immediately if we switched directions
-				if (::System::Math::Sign(dy) != ::System::Math::Sign(cameraPitchDelta))
-					cameraPitchDelta = 0.0f;
+				if (dy != 0)
+				{	
+					// invert mouse y if enabled in config
+					if (OgreClient::Singleton->Config->InvertMouseY)
+						dy = -dy;
 
+					// stop immediately if we switched directions
+					if (::System::Math::Sign(dy) != ::System::Math::Sign(cameraPitchDelta))
+						cameraPitchDelta = 0.0f;
+
+					// set a new delta and stepsize
+					// this will be processed tick based
+					cameraPitchDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dy;
+					cameraPitchStep = MOUSELOOKSTEPFACT * cameraPitchDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
+
+					isAiming = true;
+				}
+			}
+
+			// mousewheel / zoom
+			if (dz != 0 && ControllerUI::IgnoreTopControlForMouseInput)
+			{			
 				// set a new delta and stepsize
 				// this will be processed tick based
-				cameraPitchDelta += MOUSELOOKSPEED * (float)OgreClient::Singleton->Config->MouseAimSpeed * (float)dy;
-				cameraPitchStep = MOUSELOOKSTEPFACT * cameraPitchDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
+				cameraZDelta += ZOOMSPEED * (float)dz;
+				cameraZStep = MOUSELOOKSTEPFACT * cameraZDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
 			}
-		}
 
-		// mousewheel / zoom
-		if (dz != 0 && ControllerUI::IgnoreTopControlForMouseInput)
-		{			
-			// set a new delta and stepsize
-			// this will be processed tick based
-			cameraZDelta += ZOOMSPEED * (float)dz;
-			cameraZStep = MOUSELOOKSTEPFACT * cameraZDelta * ::System::Math::Max((float)OgreClient::Singleton->GameTick->Span, 1.0f);
+			// restore/fixed windows cursor position on mouse look										
+			if (IsAnyMouseDown)							
+				SetCursorPos(mouseDownWindowsPosition->x, mouseDownWindowsPosition->y);	
 		}
-
-		// restore/fixed windows cursor position on mouse look										
-		if (IsAnyMouseDown)							
-			SetCursorPos(mouseDownWindowsPosition->x, mouseDownWindowsPosition->y);	
-			
-		// perform mouseover on object
-		// if mouse is not on ui element and no button is down
-		if (ControllerUI::IgnoreTopControlForMouseInput && !IsLeftMouseDown && !IsRightMouseDown)		
-			PerformMouseOver(arg.state.X.abs, arg.state.Y.abs, false);												 
 		
-		   
+		if (!isAiming && ControllerUI::IgnoreTopControlForMouseInput)
+			PerformMouseOver(arg.state.X.abs, arg.state.Y.abs, false);												 
+
         return true;
     };
 
@@ -471,6 +506,7 @@ namespace Meridian59 { namespace Ogre
 		// exit conditions
 		if (ControllerUI::ProcessingInput ||
 			OgreClient::Singleton->Data->IsWaiting ||
+			!OgreClient::Singleton->RenderWindow ||
 			!OgreClient::Singleton->RenderWindow->isActive() ||
 			!OgreClient::Singleton->HasFocus ||
 			OgreClient::Singleton->CameraNode == nullptr ||
@@ -519,6 +555,7 @@ namespace Meridian59 { namespace Ogre
 		// exit conditions
 		if (ControllerUI::ProcessingInput ||
 			OgreClient::Singleton->Data->IsWaiting ||
+			!OgreClient::Singleton->RenderWindow ||
 			!OgreClient::Singleton->RenderWindow->isActive() ||
 			!OgreClient::Singleton->HasFocus ||
 			OgreClient::Singleton->CameraNode == nullptr ||
@@ -561,9 +598,25 @@ namespace Meridian59 { namespace Ogre
 			OgreClient::Singleton->Camera != nullptr &&
 			OgreClient::Singleton->CameraNode != nullptr)
 		{
+			/*::Ogre::Vector3 dir = OgreClient::Singleton->Camera->getRealDirection();
+			Quaternion camOrient = OgreClient::Singleton->Camera->getRealOrientation();
+
+			//::System::Console::WriteLine(
+			//	dir.x.ToString() + " " + dir.y.ToString() + " " + dir.z.ToString());
+		
+			Avatar->RoomObject->Angle = MathUtil::GetRadianForDirection(
+				V2(dir.x, dir.z));
+			
+			OgreClient::Singleton->CameraNode->_setDerivedOrientation(camOrient);
+			
+			// update orientation on server
+			OgreClient::Singleton->SendReqTurnMessage();*/
+			
+			/****************************************************************************/
+
 			Quaternion camOrient = OgreClient::Singleton->Camera->getRealOrientation();
 			Quaternion avatarOrient = Avatar->SceneNode->getOrientation();
-
+			
 			// rotate the avatar to the cam "direction"
 			::Ogre::Vector3 xAxis = avatarOrient.xAxis();
 			Quaternion quat1 = xAxis.getRotationTo(camOrient.xAxis());
@@ -633,7 +686,7 @@ namespace Meridian59 { namespace Ogre
         return direction;
     };
 
-	void ControllerInput::Tick(long long Tick, long long Span)
+	void ControllerInput::Tick(double Tick, double Span)
     {	
 		if (!IsInitialized)
 			return;
@@ -653,13 +706,21 @@ namespace Meridian59 { namespace Ogre
 		/******************************************************/
 		
 		if (OgreClient::Singleton->Data->IsWaiting ||
+			!OgreClient::Singleton->RenderWindow ||
 			!OgreClient::Singleton->RenderWindow->isVisible() ||
 			!OgreClient::Singleton->RenderWindow->isActive() ||
 			!OgreClient::Singleton->HasFocus ||
 			Avatar == nullptr ||
 			Avatar->SceneNode == nullptr)
 			return;
-      
+		
+		/*************** SELF TARGET MODIFIER *****************/
+		/*         Process keydown of some specific keys      */
+		/******************************************************/
+
+		// update flag whether selftarget modifier key is down     
+		OgreClient::Singleton->Data->SelfTarget = IsSelfTargetDown;
+
 		/****************** CAMERA PITCH/YAW ******************/
 		/*      Apply frame-based smooth camera pitch/yaw     */
 		/******************************************************/	
@@ -796,14 +857,6 @@ namespace Meridian59 { namespace Ogre
 			}
 		}
 
-		/*************** SPECIAL KEYBOARD KEYS ****************/
-		/*         Process keydown of some specific keys      */
-		/******************************************************/	
-
-		// update flag whether selftarget modifier key is down     
-		if (!ControllerUI::ProcessingInput)
-			OgreClient::Singleton->Data->SelfTarget = IsSelfTargetDown;
-		
 		/********************* MOVEMENT INPUT *****************/
 		/*  left, right, up, down keys or both mouse buttons  */
 		/******************************************************/	
@@ -820,7 +873,7 @@ namespace Meridian59 { namespace Ogre
 			V2 direction = GetMoveVector();
 
 			// get the height of the avatar in ROO format
-			float playerheight = 0.9f * 16.0f * Avatar->SceneNode->_getWorldAABB().getSize().y;
+			float playerheight = 0.88f * 16.0f * Avatar->SceneNode->_getWorldAABB().getSize().y;
 				
 			// try to do the move (might get blocked)				
 			OgreClient::Singleton->TryMove(direction, (unsigned char)speed, playerheight);

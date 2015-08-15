@@ -447,14 +447,14 @@ namespace Meridian59.Data.Models
         #endregion
         
         #region IStringResolvable
-        public void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {           
             string bg_res;
             string bg_name;
 
-            StringResources.TryGetValue(nameRID, out bg_res);
-            StringResources.TryGetValue(overlayFileRID, out bg_name);
-            
+			StringResources.TryGetValue(nameRID, out bg_res);
+			StringResources.TryGetValue(overlayFileRID, out bg_name);
+
             if (RaiseChangedEvent)
             {
                 if (bg_res != null) OverlayFile = bg_res;

@@ -14,6 +14,7 @@
  If not, see http://www.gnu.org/licenses/.
 */
 
+using Meridian59.Common;
 using Meridian59.Common.Constants;
 using Meridian59.Common.Interfaces;
 using System;
@@ -23,8 +24,15 @@ namespace Meridian59.Files.ROO
     [Serializable]
     public abstract class RooBSPItem : IByteSerializableFast, IRooIndicesResolvable
     {
-        public const byte PartitionLineType = 0x01;
-        public const byte SubSectorType = 0x02;
+        /// <summary>
+        /// Different types of nodes in a tree.
+        /// Node = Has at least one child.
+        /// Leaf = Has no children
+        /// </summary>
+        public enum NodeType : byte
+        {
+            Node = 0x01, Leaf=0x02
+        }
 
         #region IByteSerializable
         public virtual int ByteLength
@@ -36,40 +44,74 @@ namespace Meridian59.Files.ROO
         {
             int cursor = StartIndex;
 
-            Buffer[cursor] = Type;
+            Buffer[cursor] = (byte)Type;
             cursor++;
 
-            Array.Copy(BitConverter.GetBytes(X1), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(boundingBox.Min.X)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(Y1), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(boundingBox.Min.Y)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(X2), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(boundingBox.Max.X)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(Y2), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
-            
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(boundingBox.Max.Y)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
+            }
+            else
+            {
+                Array.Copy(BitConverter.GetBytes((float)boundingBox.Min.X), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)boundingBox.Min.Y), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)boundingBox.Max.X), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)boundingBox.Max.Y), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+            }
+
             return cursor - StartIndex;
         }
 
         public virtual unsafe void WriteTo(ref byte* Buffer)
         {
-            Buffer[0] = Type;
+            Buffer[0] = (byte)Type;
             Buffer++;
 
-            *((int*)Buffer) = X1;
-            Buffer += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                *((int*)Buffer) = Convert.ToInt32(boundingBox.Min.X);
+                Buffer += TypeSizes.INT;
 
-            *((int*)Buffer) = Y1;
-            Buffer += TypeSizes.INT;
+                *((int*)Buffer) = Convert.ToInt32(boundingBox.Min.Y);
+                Buffer += TypeSizes.INT;
 
-            *((int*)Buffer) = X2;
-            Buffer += TypeSizes.INT;
+                *((int*)Buffer) = Convert.ToInt32(boundingBox.Max.X);
+                Buffer += TypeSizes.INT;
 
-            *((int*)Buffer) = Y2;
-            Buffer += TypeSizes.INT;
+                *((int*)Buffer) = Convert.ToInt32(boundingBox.Max.Y);
+                Buffer += TypeSizes.INT;
+            }
+            else
+            {
+                *((float*)Buffer) = (float)boundingBox.Min.X;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)boundingBox.Min.Y;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)boundingBox.Max.X;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)boundingBox.Max.Y;
+                Buffer += TypeSizes.FLOAT;
+            }
         }
 
         public virtual int ReadFrom(byte[] Buffer, int StartIndex = 0)
@@ -79,18 +121,35 @@ namespace Meridian59.Files.ROO
             // no need to read type
             cursor++;
 
-            X1 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                boundingBox.Min.X = BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            Y1 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+                boundingBox.Min.Y = BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            X2 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+                boundingBox.Max.X = BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            Y2 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
-            
+                boundingBox.Max.Y = BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
+            }
+            else
+            {
+                boundingBox.Min.X = BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                boundingBox.Min.Y = BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                boundingBox.Max.X = BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                boundingBox.Max.Y = BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+            }
+
             return cursor - StartIndex;
         }
 
@@ -99,17 +158,34 @@ namespace Meridian59.Files.ROO
             // no need to read type
             Buffer++;
 
-            X1 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                boundingBox.Min.X = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            Y1 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+                boundingBox.Min.Y = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            X2 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+                boundingBox.Max.X = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            Y2 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+                boundingBox.Max.Y = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
+            }
+            else
+            {
+                boundingBox.Min.X = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                boundingBox.Min.Y = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                boundingBox.Max.X = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                boundingBox.Max.Y = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+            }
         }
 
         public byte[] Bytes
@@ -127,57 +203,120 @@ namespace Meridian59.Files.ROO
         }
         #endregion
 
-        public abstract byte Type { get; }
-        
-        public int X1 { get; set; }
-        public int Y1 { get; set; }
-        public int X2 { get; set; }
-        public int Y2 { get; set; }
+        protected BoundingBox2D boundingBox;
 
-        public RooBSPItem(int X1, int X2, int Y1, int Y2)
+        /// <summary>
+        /// RooVersion of the fileformat. Important for parsers.
+        /// </summary>
+        public uint RooVersion { get; set; }
+
+        /// <summary>
+        /// Abstract. Type to set by deriving subclasses.
+        /// </summary>
+        public abstract NodeType Type { get; }
+
+        /// <summary>
+        /// A 2D boundingbox of this BSP node (splitter or leaf).
+        /// </summary>
+        public BoundingBox2D BoundingBox { get { return boundingBox; } set { boundingBox = value; } }
+
+        /// <summary>
+        /// BoundingBox minimum X of this node (or leaf).
+        /// </summary>
+        public int X1 { get { return (int)boundingBox.Min.X; } set { boundingBox.Min.X = value; } }
+
+        /// <summary>
+        /// BoundingBox minimum Y of this node (or leaf).
+        /// </summary>
+        public int Y1 { get { return (int)boundingBox.Min.Y; } set { boundingBox.Min.Y = value; } }
+
+        /// <summary>
+        /// BoundingBox maximum X of this node (or leaf).
+        /// </summary>
+        public int X2 { get { return (int)boundingBox.Max.X; } set { boundingBox.Max.X = value; } }
+
+        /// <summary>
+        /// BoundingBox maximum Y of this node (or leaf).
+        /// </summary>
+        public int Y2 { get { return (int)boundingBox.Max.Y; } set { boundingBox.Max.Y = value; } }
+
+        /// <summary>
+        /// Constructor by values
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        public RooBSPItem(uint RooVersion)
         {
-            this.X1 = X1;
-            this.X1 = X2;
-            this.Y1 = Y1;
-            this.Y2 = Y2;
+            this.RooVersion = RooVersion;
         }
 
-        public RooBSPItem(byte[] Buffer, int StartIndex = 0)
+        /// <summary>
+        /// Constructor by managed parser
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="Buffer"></param>
+        /// <param name="StartIndex"></param>
+        public RooBSPItem(uint RooVersion, byte[] Buffer, int StartIndex = 0)
         {
+            this.RooVersion = RooVersion;
+
             ReadFrom(Buffer, StartIndex);
         }
 
-        public unsafe RooBSPItem(ref byte* Buffer)
+        /// <summary>
+        /// Constructor by native parser
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="Buffer"></param>
+        public unsafe RooBSPItem(uint RooVersion, ref byte* Buffer)
         {
+            this.RooVersion = RooVersion;
+
             ReadFrom(ref Buffer);
         }
 
+        /// <summary>
+        /// Abstract. Must be implemented.
+        /// </summary>
+        /// <param name="RooFile"></param>
         public abstract void ResolveIndices(RooFile RooFile);
 
-        public static RooBSPItem ExtractBSPItem(byte[] Buffer, int StartIndex)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="Buffer"></param>
+        /// <param name="StartIndex"></param>
+        /// <returns></returns>
+        public static RooBSPItem ExtractBSPItem(uint RooVersion, byte[] Buffer, int StartIndex)
         {          
-            switch (Buffer[StartIndex])
+            switch ((NodeType)Buffer[StartIndex])
             {
-                case PartitionLineType:
-                    return new RooPartitionLine(Buffer, StartIndex);
+                case NodeType.Node:
+                    return new RooPartitionLine(RooVersion, Buffer, StartIndex);
                     
-                case SubSectorType:
-                    return new RooSubSector(Buffer, StartIndex);
+                case NodeType.Leaf:
+                    return new RooSubSector(RooVersion, Buffer, StartIndex);
 
                 default:
                     throw new Exception("Unsupported BSPItem type: "+Buffer[StartIndex]);
             }
         }
 
-        public static unsafe RooBSPItem ExtractBSPItem(ref byte* Buffer)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="Buffer"></param>
+        /// <returns></returns>
+        public static unsafe RooBSPItem ExtractBSPItem(uint RooVersion, ref byte* Buffer)
         {
-            switch (Buffer[0])
+            switch ((NodeType)Buffer[0])
             {
-                case PartitionLineType:
-                    return new RooPartitionLine(ref Buffer);
+                case NodeType.Node:
+                    return new RooPartitionLine(RooVersion, ref Buffer);
 
-                case SubSectorType:
-                    return new RooSubSector(ref Buffer);
+                case NodeType.Leaf:
+                    return new RooSubSector(RooVersion, ref Buffer);
 
                 default:
                     throw new Exception("Unsupported BSPItem type: " + Buffer[0]);

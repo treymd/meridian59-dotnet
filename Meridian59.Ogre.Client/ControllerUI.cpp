@@ -15,7 +15,6 @@ namespace Meridian59 { namespace Ogre
 		movingWindow	= nullptr;
 		keyDown			= CEGUI::Key::Scan::Unknown;
 		keyChar			= CEGUI::Key::Scan::Unknown;
-		tickKeyRepeat	= 0;
 		processingInput = false;
 		fastKeyRepeat	= false;
 	};
@@ -30,7 +29,7 @@ namespace Meridian59 { namespace Ogre
 		system		= ::CEGUI::System::getSingletonPtr();
 		guiContext	= &system->getDefaultGUIContext();
 		mouseCursor = &guiContext->getMouseCursor();
-
+		
 		// load resource to ogre
 		::Ogre::ResourceGroupManager* resMan = 
 			::Ogre::ResourceGroupManager::getSingletonPtr();
@@ -91,7 +90,7 @@ namespace Meridian59 { namespace Ogre
 		
 		// load layout/rootelement
 		guiRoot = CEGUI::WindowManager::getSingleton().loadLayoutFromFile(UI_FILE_LAYOUT); 
-		guiRoot->subscribeEvent(CEGUI::Window::EventMouseClick, CEGUI::Event::Subscriber(UICallbacks::OnRootClicked));
+		guiRoot->subscribeEvent(CEGUI::Window::EventMouseButtonDown, CEGUI::Event::Subscriber(UICallbacks::OnRootMouseDown));
 		guiRoot->subscribeEvent(CEGUI::Window::EventKeyDown, CEGUI::Event::Subscriber(UICallbacks::OnRootKeyDown));
 
 		// set mouse defaultcursor image
@@ -121,6 +120,7 @@ namespace Meridian59 { namespace Ogre
 		Attributes::Initialize();
 		Skills::Initialize();
 		Spells::Initialize();
+		Quests::Initialize();
 		Actions::Initialize();
 		Inventory::Initialize();
 		MainButtonsLeft::Initialize();
@@ -138,8 +138,9 @@ namespace Meridian59 { namespace Ogre
 		ConfirmPopup::Initialize();
 		PlayerOverlays::Initialize();
 		ObjectContents::Initialize();
-		//...
-
+		Login::Initialize();
+		Options::Initialize();
+		
 		// attach listener to Data
 		OgreClient::Singleton->Data->PropertyChanged += 
 			gcnew PropertyChangedEventHandler(OnDataPropertyChanged);
@@ -175,6 +176,7 @@ namespace Meridian59 { namespace Ogre
 		Attributes::Destroy();
 		Skills::Destroy();
 		Spells::Destroy();
+		Quests::Destroy();
 		Actions::Destroy();
 		Inventory::Destroy();
 		MainButtonsLeft::Destroy();
@@ -192,6 +194,8 @@ namespace Meridian59 { namespace Ogre
 		ConfirmPopup::Destroy();
 		PlayerOverlays::Destroy();
 		ObjectContents::Destroy();
+		Login::Destroy();
+		Options::Destroy();
 
 		// destroy cegui system
 		renderer->destroySystem();
@@ -207,7 +211,6 @@ namespace Meridian59 { namespace Ogre
 		movingWindow	= nullptr;
 		keyDown			= CEGUI::Key::Scan::Unknown;
 		keyChar			= CEGUI::Key::Scan::Unknown;
-		tickKeyRepeat	= 0;
 		processingInput = false;
 		fastKeyRepeat	= false;
 
@@ -215,7 +218,7 @@ namespace Meridian59 { namespace Ogre
 		IsInitialized = false;
 	};
 
-	void ControllerUI::Tick(long long Tick, long long Span)
+	void ControllerUI::Tick(double Tick, double Span)
 	{
 		if (!IsInitialized)
 			return;
@@ -225,18 +228,28 @@ namespace Meridian59 { namespace Ogre
 			focusedControl = guiRoot->getActiveChild();
 			processingInput = false;
 
+			// 1) Null focus, make sure the root is the focused window
 			if (!focusedControl)
 			{
 				guiRoot->activate();
 				focusedControl = guiRoot;
 			}
+
+			// 2) A subwindow is selected which consumes all input
+			else if (IsRecursiveChildOf(focusedControl, Spells::Window))
+			{
+				processingInput = true;
+			}
+
+			// 3) Specifi UI elements always consume all input (like textboxes)
 			else
 			{			
 				const CEGUI::String type = focusedControl->getType();
 
 				processingInput = 
 					(type.compare(UI_WINDOWTYPE_EDITBOX) == 0) ||
-					(type.compare(UI_WINDOWTYPE_MULTILINEEDITBOX) == 0);
+					(type.compare(UI_WINDOWTYPE_MULTILINEEDITBOX) == 0) ||
+					(type.compare(UI_WINDOWTYPE_BUTTON) == 0);
 			}
 		}
 
@@ -247,16 +260,14 @@ namespace Meridian59 { namespace Ogre
 			system->injectTimePulse((float)Span / 1000.0f);
 			guiContext->injectTimePulse((float)Span / 1000.0f);
 
-			// update mouseclick executor
-			Inventory::Update();
+			// tick sub components
+			Inventory::Tick(Tick, Span);
 			Chat::Tick(Tick, Span);
-
-			long long delta = OgreClient::Singleton->GameTick->Current - tickKeyRepeat;
 
 			// keyrepeat
 			if (keyDown != CEGUI::Key::Scan::Unknown &&
-				((!fastKeyRepeat && delta >= KEYREPEATINTERVALDELAYMS) ||
-				(fastKeyRepeat && delta >= KEYREPEATINTERVALMS)))
+				((!fastKeyRepeat && OgreClient::Singleton->GameTick->CanKeyRepeatStart()) ||
+				(fastKeyRepeat && OgreClient::Singleton->GameTick->CanKeyRepeat())))
 			{	
 				// mark for shorther keyrepeat once delay elapsed/first run
 				fastKeyRepeat = true;
@@ -268,7 +279,7 @@ namespace Meridian59 { namespace Ogre
 					guiContext->injectChar(keyChar);
 
 				// update repeat tick
-				tickKeyRepeat = OgreClient::Singleton->GameTick->Current;
+				OgreClient::Singleton->GameTick->DidKeyRepeat();
 			}
 		}
 	};
@@ -286,6 +297,25 @@ namespace Meridian59 { namespace Ogre
 				Window->moveToFront();
 			}
 		}
+	};
+	
+	bool ControllerUI::IsRecursiveChildOf(::CEGUI::Window* Child, ::CEGUI::Window* Parent)
+	{
+		if (!Child || !Parent)
+			return false;
+
+		if (Child == Parent)
+			return true;
+
+		while (Child->getParent())	
+		{
+			if (Child->getParent() == Parent)
+				return true;
+
+			Child = Child->getParent();
+		}
+
+		return false;
 	};
 
 	void ControllerUI::ActivateRoot()
@@ -410,6 +440,68 @@ namespace Meridian59 { namespace Ogre
 		}	
 	};
 
+	void ControllerUI::SaveLayoutToConfig()
+	{
+		if (!IsInitialized)
+			return;
+
+		// avatar
+		OgreClient::Singleton->Config->UILayoutAvatar->setPosition(Avatar::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutAvatar->setSize(Avatar::Window->getSize());
+
+		// target
+		OgreClient::Singleton->Config->UILayoutTarget->setPosition(Target::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutTarget->setSize(Target::Window->getSize());
+
+		// minimap
+		OgreClient::Singleton->Config->UILayoutMinimap->setPosition(MiniMap::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutMinimap->setSize(MiniMap::Window->getSize());
+
+		// chat
+		OgreClient::Singleton->Config->UILayoutChat->setPosition(Chat::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutChat->setSize(Chat::Window->getSize());
+
+		// inventory
+		OgreClient::Singleton->Config->UILayoutInventory->setPosition(Inventory::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutInventory->setSize(Inventory::Window->getSize());
+
+		// spells
+		OgreClient::Singleton->Config->UILayoutSpells->setPosition(Spells::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutSpells->setSize(Spells::Window->getSize());
+
+		// skills
+		OgreClient::Singleton->Config->UILayoutSkills->setPosition(Skills::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutSkills->setSize(Skills::Window->getSize());
+
+		// actions
+		OgreClient::Singleton->Config->UILayoutActions->setPosition(Actions::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutActions->setSize(Actions::Window->getSize());
+
+		// attributes
+		OgreClient::Singleton->Config->UILayoutAttributes->setPosition(Attributes::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutAttributes->setSize(Attributes::Window->getSize());
+
+		// mainbuttonsleft
+		OgreClient::Singleton->Config->UILayoutMainButtonsLeft->setPosition(MainButtonsLeft::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutMainButtonsLeft->setSize(MainButtonsLeft::Window->getSize());
+
+		// mainbuttonsright
+		OgreClient::Singleton->Config->UILayoutMainButtonsRight->setPosition(MainButtonsRight::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutMainButtonsRight->setSize(MainButtonsRight::Window->getSize());
+
+		// actionbuttons
+		OgreClient::Singleton->Config->UILayoutActionButtons->setPosition(ActionButtons::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutActionButtons->setSize(ActionButtons::Window->getSize());
+
+		// onlineplayers
+		OgreClient::Singleton->Config->UILayoutOnlinePlayers->setPosition(OnlinePlayers::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutOnlinePlayers->setSize(OnlinePlayers::Window->getSize());
+
+		// roomobjects
+		OgreClient::Singleton->Config->UILayoutRoomObjects->setPosition(RoomObjects::Window->getPosition());
+		OgreClient::Singleton->Config->UILayoutRoomObjects->setSize(RoomObjects::Window->getSize());
+	};
+
 	void ControllerUI::OnDataPropertyChanged(Object^ sender, PropertyChangedEventArgs^ e)
 	{		
 		if (::System::String::Equals(e->PropertyName, DataController::PROPNAME_UIMODE))
@@ -434,6 +526,7 @@ namespace Meridian59 { namespace Ogre
 			Actions::Window->setVisible(false);
 			Spells::Window->setVisible(false);
 			Skills::Window->setVisible(false);
+			Quests::Window->setVisible(false);
 			Inventory::Window->setVisible(false);
 			MainButtonsLeft::Window->setVisible(mode == UIMode::Playing);
 			MainButtonsRight::Window->setVisible(mode == UIMode::Playing);
@@ -449,6 +542,11 @@ namespace Meridian59 { namespace Ogre
 			AvatarCreateWizard::Window->setVisible(mode == UIMode::AvatarCreation);
 			ConfirmPopup::Window->setVisible(false);
 			ObjectContents::Window->setVisible(false);
+			Login::Window->setVisible(mode == UIMode::Login);
+			Options::Window->setVisible(false);
+
+			if (mode == UIMode::AvatarSelection)
+				ControllerUI::Welcome::Avatars->activate();
 		}
 	};
 
@@ -504,8 +602,10 @@ namespace Meridian59 { namespace Ogre
 	void ControllerUI::InjectKeyDown(::CEGUI::Key::Scan Key)
 	{
 		keyDown = Key;
-		tickKeyRepeat = OgreClient::Singleton->GameTick->Current;
-		
+
+		// save tick for repeating keys in Tick()
+		OgreClient::Singleton->GameTick->DidKeyRepeat();
+
 		if (guiContext != nullptr)
 			guiContext->injectKeyDown(Key);
 	};
@@ -557,7 +657,7 @@ namespace Meridian59 { namespace Ogre
 		return true;
 	};
 	
-	bool UICallbacks::OnRootClicked(const CEGUI::EventArgs& e)
+	bool UICallbacks::OnRootMouseDown(const CEGUI::EventArgs& e)
 	{
 		const CEGUI::MouseEventArgs& args = static_cast<const CEGUI::MouseEventArgs&>(e);
 
@@ -569,13 +669,16 @@ namespace Meridian59 { namespace Ogre
 	bool UICallbacks::OnRootKeyDown(const CEGUI::EventArgs& e)
 	{
 		const CEGUI::KeyEventArgs& args = static_cast<const CEGUI::KeyEventArgs&>(e);
-
-		// close window on ESC
+		
 		if (args.scancode == CEGUI::Key::Return ||
 			args.scancode == CEGUI::Key::NumpadEnter)
 		{
-			ControllerUI::Chat::Window->setVisible(true);
-			ControllerUI::Chat::Input->activate();
+			// show chatwindow
+			if (OgreClient::Singleton->Data->UIMode == UIMode::Playing)
+			{
+				ControllerUI::Chat::Window->setVisible(true);
+				ControllerUI::Chat::Input->activate();
+			}
 		}
 
 		return true;

@@ -19,6 +19,7 @@ using System.ComponentModel;
 using Meridian59.Common.Interfaces;
 using Meridian59.Common.Constants;
 using Meridian59.Common;
+using Meridian59.Common.Enums;
 
 namespace Meridian59.Data.Models
 {
@@ -278,13 +279,13 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string skill_name;
             string skill_description;
 
-            StringResources.TryGetValue(skillNameID, out skill_name);
-            StringResources.TryGetValue(skillDescriptionID, out skill_description);
+			StringResources.TryGetValue(skillNameID, out skill_name);
+			StringResources.TryGetValue(skillDescriptionID, out skill_description);
 
             if (RaiseChangedEvent)
             {

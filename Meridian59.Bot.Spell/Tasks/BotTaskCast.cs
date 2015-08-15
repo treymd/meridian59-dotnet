@@ -14,6 +14,7 @@
  If not, see http://www.gnu.org/licenses/.
 */
 
+using Meridian59.Common.Constants;
 using System;
 
 namespace Meridian59.Bot.Spell
@@ -27,17 +28,19 @@ namespace Meridian59.Bot.Spell
         public string Target = String.Empty;
         public string Where = String.Empty;
         public string OnMax = String.Empty;
+        public uint Cap = StatNumsValues.SKILLMAX;
 
         public BotTaskCast()
         {
         }
 
-        public BotTaskCast(string Name, string Target, string Where, string OnMax)
+        public BotTaskCast(string Name, string Target, string Where, string OnMax, uint Cap)
         {
             this.Name = Name;
             this.Target = Target;
             this.Where = Where;
             this.OnMax = OnMax;
+            this.Cap = Cap;
         }
     }
 }

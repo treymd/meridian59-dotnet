@@ -18,22 +18,20 @@
 
 #pragma managed(push, off)
 #include "OgreRoot.h"
-#include "OgreRenderWindow.h"
-#include "OgreRenderSystem.h"
-#include "OgreCamera.h"
-#include "OgreSceneManager.h"
+#include "OgreD3D9RenderSystem.h"
+#include "OgreD3D9RenderWindow.h"
+#include "OgreOctreeCamera.h"
+#include "OgreOctreeSceneManager.h"
 #include "OgreSceneNode.h"
 #include "OgreViewport.h"
 #include "OgreString.h"
 #include "OgreConfigFile.h"
-#include "OgreD3D9RenderSystem.h"
 #include "OgreOctreePlugin.h"
-#include "OgreCgPlugin.h"
 #include "ParticleUniversePlugin.h"
 #pragma managed(pop)
 
 #include "resource.h"
-#include "StringDefines.h"
+#include "Constants.h"
 #include "StringConvert.h"
 #include "ControllerSound.h"
 #include "ControllerInput.h"
@@ -48,6 +46,7 @@
 #include "GameTickOgre.h"
 #include "ResourceManagerOgre.h"
 #include "DataControllerOgre.h"
+#include "OgreClientConfig.h"
 
 namespace Meridian59 { namespace Ogre
 {
@@ -56,7 +55,6 @@ namespace Meridian59 { namespace Ogre
 	using namespace System::Collections::Generic;
 	using namespace Meridian59::Protocol::Events;
 	using namespace Meridian59::Protocol::GameMessages;
-	using namespace Meridian59::Launcher;
 	using namespace Meridian59::Data::Models;
 	using namespace Meridian59::Drawing2D;
 	using namespace Meridian59::Ogre;
@@ -73,32 +71,29 @@ namespace Meridian59 { namespace Ogre
 		::Meridian59::Ogre::GameTickOgre^, 
 		::Meridian59::Ogre::ResourceManagerOgre^, 
 		::Meridian59::Ogre::DataControllerOgre^,
-		::Meridian59::Launcher::Models::Options^,
+		::Meridian59::Ogre::OgreClientConfig^,
 		::Meridian59::Ogre::OgreClient^>
 	{
 	protected:
-        ::Ogre::Root*			root;
-		::Ogre::RenderWindow*	renderWindowDummy;
-        ::Ogre::RenderWindow*	renderWindow;
-        ::Ogre::RenderSystem*	renderSystem;
-		::Ogre::Camera*			camera;
-        ::Ogre::SceneNode*		cameraNode;
-        ::Ogre::Viewport*		viewport;
-		::Ogre::Viewport*		viewportInvis;
-        ::Ogre::SceneManager*	sceneManager;
-		::Ogre::OctreePlugin*	pluginOctree;
-		::Ogre::CgPlugin*		pluginCG;
-		::Caelum::CaelumPlugin*	pluginCaelum;
+        ::Ogre::Root*				root;
+		::Ogre::D3D9RenderWindow*	renderWindowDummy;
+        ::Ogre::D3D9RenderWindow*	renderWindow;
+        ::Ogre::D3D9RenderSystem*	renderSystem;
+		::Ogre::OctreeCamera*		camera;
+        ::Ogre::SceneNode*			cameraNode;
+        ::Ogre::Viewport*			viewport;
+		::Ogre::Viewport*			viewportInvis;
+        ::Ogre::OctreeSceneManager*	sceneManager;
+		::Ogre::OctreePlugin*		pluginOctree;
+		::Caelum::CaelumPlugin*		pluginCaelum;
 		::ParticleUniverse::ParticleUniversePlugin* pluginParticleUniverse;
 
 		HWND					renderWindowHandle;
 		CameraListener*			cameraListener;
 		MyWindowEventListener*	windowListener;
         MiniMapCEGUI^			miniMap;
-		LauncherForm^			launcherForm;
 
-        bool isEngineInitialized;
-		bool hasFocus;
+        bool hasFocus;
 		bool isWinCursorVisible;
 		bool invisViewportUpdateFlip;
 
@@ -109,16 +104,12 @@ namespace Meridian59 { namespace Ogre
         /// 
         /// </summary>
 		virtual void Cleanup() override;
-		
-		/// <summary>
-        /// 
-        /// </summary>
-		void CleanupEngine();
-		
-		/// <summary>
-        /// Shows the launcher form
-        /// </summary>
-		void ShowLauncherForm();
+
+		void RenderWindowCreate();
+		void RenderWindowDestroy();
+
+		void DemoSceneDestroy();
+		void DemoSceneLoadBrax();
 
 		/// <summary>
         /// Handle network client exception
@@ -126,16 +117,6 @@ namespace Meridian59 { namespace Ogre
         /// <param name="Error"></param>
         virtual void OnServerConnectionException(System::Exception^ Error) override;
 		
-		/// <summary>
-        /// 
-        /// </summary>
-		void OnLauncherConnectRequest(::System::Object^ sender, ::System::EventArgs^ e);
-		
-		/// <summary>
-        /// 
-        /// </summary>
-		void OnLauncherFormExit(::System::Object^ sender, ::System::EventArgs^ e);
-
 		/// <summary>
         /// Initializes resouces
         /// </summary>
@@ -231,6 +212,8 @@ namespace Meridian59 { namespace Ogre
 #endif
 
 	public:
+		bool RecreateWindow = false;
+
 		property unsigned char AppVersionMajor
 		{ 
 			public: virtual unsigned char get() override { return 90; } 			
@@ -238,7 +221,7 @@ namespace Meridian59 { namespace Ogre
 
 		property unsigned char AppVersionMinor
 		{ 
-			public: virtual unsigned char get() override { return 1; } 			
+			public: virtual unsigned char get() override { return 2; } 			
 		};
 		
 		property ::Ogre::Root* Root 
@@ -247,22 +230,22 @@ namespace Meridian59 { namespace Ogre
 			protected: void set(Ogre::Root* value) { root = value; }
 		};
 
-		property ::Ogre::RenderWindow* RenderWindow 
+		property ::Ogre::D3D9RenderWindow* RenderWindow 
 		{ 
-			public: ::Ogre::RenderWindow* get() { return renderWindow; } 
-			protected: void set(Ogre::RenderWindow* value) { renderWindow = value; }
+			public: ::Ogre::D3D9RenderWindow* get() { return renderWindow; }
+			protected: void set(Ogre::D3D9RenderWindow* value) { renderWindow = value; }
 		};
 		
-		property ::Ogre::RenderSystem* RenderSystem 
+		property ::Ogre::D3D9RenderSystem* RenderSystem 
 		{ 
-			public: ::Ogre::RenderSystem* get() { return renderSystem; } 
-			protected: void set(Ogre::RenderSystem* value) { renderSystem = value; }
+			public: ::Ogre::D3D9RenderSystem* get() { return renderSystem; }
+			protected: void set(Ogre::D3D9RenderSystem* value) { renderSystem = value; }
 		};
 
-		property ::Ogre::Camera* Camera 
+		property ::Ogre::OctreeCamera* Camera 
 		{ 
-			public: ::Ogre::Camera* get() { return camera; } 
-			protected: void set(Ogre::Camera* value) { camera = value; }
+			public: ::Ogre::OctreeCamera* get() { return camera; }
+			protected: void set(Ogre::OctreeCamera* value) { camera = value; }
 		};
 
 		property ::Ogre::SceneNode* CameraNode 
@@ -283,10 +266,10 @@ namespace Meridian59 { namespace Ogre
 			protected: void set(Ogre::Viewport* value) { viewportInvis = value; }
 		};
 
-		property ::Ogre::SceneManager* SceneManager 
+		property ::Ogre::OctreeSceneManager* SceneManager 
 		{ 
-			public: ::Ogre::SceneManager* get() { return sceneManager; } 
-			protected: void set(Ogre::SceneManager* value) { sceneManager = value; }
+			public: ::Ogre::OctreeSceneManager* get() { return sceneManager; }
+			protected: void set(Ogre::OctreeSceneManager* value) { sceneManager = value; }
 		};
 
 		property HWND RenderWindowHandle
@@ -318,15 +301,15 @@ namespace Meridian59 { namespace Ogre
 		virtual void Init() override;
 
 		/// <summary>
-        /// Initializes the engine
-        /// </summary>
-        void InitEngine();
-
-		/// <summary>
         /// Called each mainthread loop
         /// </summary>
         virtual void Update() override;
 		
+		/// <summary>
+		/// Overriden Disconnect
+		/// </summary>
+		virtual void Disconnect() override;
+
 		/// <summary>
         /// Overwritten from base class to also set the 
 		/// ActionButtons from Config.

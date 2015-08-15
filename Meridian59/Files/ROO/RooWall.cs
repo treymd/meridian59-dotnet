@@ -18,6 +18,7 @@ using Meridian59.Common;
 using Meridian59.Common.Constants;
 using Meridian59.Common.Enums;
 using Meridian59.Common.Interfaces;
+using Meridian59.Files.BGF;
 using System;
 
 // Switch FP precision based on architecture
@@ -36,15 +37,29 @@ namespace Meridian59.Files.ROO
     [Serializable]
     public class RooWall : IByteSerializableFast, IRooIndicesResolvable
     {
+        /// <summary>
+        /// Stores 3D VertexData for a side-part of a RooWall
+        /// </summary>
+        public struct VertexData
+        {
+            public V3 P0, P1, P2, P3;
+            public V2 UV0, UV1, UV2, UV3;
+            public V3 Normal;
+        }
+
         #region IByteSerializable
         public int ByteLength 
         {
             get 
             {
-                return TypeSizes.SHORT + TypeSizes.SHORT + TypeSizes.SHORT +
-                    TypeSizes.INT + TypeSizes.INT + TypeSizes.INT + TypeSizes.INT +
+                ushort lClientLength = (RooVersion < RooFile.VERSIONFLOATCOORDS) ? TypeSizes.SHORT : TypeSizes.FLOAT;
+
+                return 
                     TypeSizes.SHORT + TypeSizes.SHORT + TypeSizes.SHORT +
-                    TypeSizes.SHORT + TypeSizes.SHORT + TypeSizes.SHORT + TypeSizes.SHORT;
+                    TypeSizes.INT + TypeSizes.INT + TypeSizes.INT + TypeSizes.INT +
+                    lClientLength + 
+                    TypeSizes.SHORT + TypeSizes.SHORT + TypeSizes.SHORT + TypeSizes.SHORT + 
+                    TypeSizes.SHORT + TypeSizes.SHORT;
             }
         }
 
@@ -52,29 +67,49 @@ namespace Meridian59.Files.ROO
         {
             int cursor = StartIndex;
 
-            Array.Copy(BitConverter.GetBytes(ServerID), 0, Buffer, cursor, TypeSizes.SHORT);
+            Array.Copy(BitConverter.GetBytes(NextWallNumInPlane), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(RightSideReference), 0, Buffer, cursor, TypeSizes.SHORT);
+            Array.Copy(BitConverter.GetBytes(RightSideNum), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(LeftSideReference), 0, Buffer, cursor, TypeSizes.SHORT);
+            Array.Copy(BitConverter.GetBytes(LeftSideNum), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(X1), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(P1.X)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(Y1), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(P1.Y)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(X2), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(P2.X)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(Y2), 0, Buffer, cursor, TypeSizes.INT);
-            cursor += TypeSizes.INT;
+                Array.Copy(BitConverter.GetBytes(Convert.ToInt32(P2.Y)), 0, Buffer, cursor, TypeSizes.INT);
+                cursor += TypeSizes.INT;
 
-            Array.Copy(BitConverter.GetBytes(ClientLength), 0, Buffer, cursor, TypeSizes.SHORT);
-            cursor += TypeSizes.SHORT;
+                Array.Copy(BitConverter.GetBytes(Convert.ToUInt16(ClientLength)), 0, Buffer, cursor, TypeSizes.SHORT);
+                cursor += TypeSizes.SHORT;
+            }
+            else
+            {
+                Array.Copy(BitConverter.GetBytes((float)P1.X), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)P1.Y), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)P2.X), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)P2.Y), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+
+                Array.Copy(BitConverter.GetBytes((float)ClientLength), 0, Buffer, cursor, TypeSizes.FLOAT);
+                cursor += TypeSizes.FLOAT;
+            }
 
             Array.Copy(BitConverter.GetBytes(RightXOffset), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
@@ -88,10 +123,10 @@ namespace Meridian59.Files.ROO
             Array.Copy(BitConverter.GetBytes(LeftYOffset), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(RightSectorReference), 0, Buffer, cursor, TypeSizes.SHORT);
+            Array.Copy(BitConverter.GetBytes(RightSectorNum), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(LeftSectorReference), 0, Buffer, cursor, TypeSizes.SHORT);
+            Array.Copy(BitConverter.GetBytes(LeftSectorNum), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
             return cursor - StartIndex;
@@ -99,29 +134,49 @@ namespace Meridian59.Files.ROO
 
         public unsafe void WriteTo(ref byte* Buffer)
         {            
-            *((short*)Buffer) = ServerID;
+            *((short*)Buffer) = NextWallNumInPlane;
             Buffer += TypeSizes.SHORT;
 
-            *((ushort*)Buffer) = RightSideReference;
+            *((ushort*)Buffer) = RightSideNum;
             Buffer += TypeSizes.SHORT;
 
-            *((ushort*)Buffer) = LeftSideReference;
+            *((ushort*)Buffer) = LeftSideNum;
             Buffer += TypeSizes.SHORT;
 
-            *((int*)Buffer) = X1;
-            Buffer += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                *((int*)Buffer) = Convert.ToInt32(P1.X);
+                Buffer += TypeSizes.INT;
 
-            *((int*)Buffer) = Y1;
-            Buffer += TypeSizes.INT;
+                *((int*)Buffer) = Convert.ToInt32(P1.Y);
+                Buffer += TypeSizes.INT;
 
-            *((int*)Buffer) = X2;
-            Buffer += TypeSizes.INT;
+                *((int*)Buffer) = Convert.ToInt32(P2.X);
+                Buffer += TypeSizes.INT;
 
-            *((int*)Buffer) = Y2;
-            Buffer += TypeSizes.INT;
+                *((int*)Buffer) = Convert.ToInt32(P2.Y);
+                Buffer += TypeSizes.INT;
 
-            *((ushort*)Buffer) = ClientLength;
-            Buffer += TypeSizes.SHORT;
+                *((ushort*)Buffer) = Convert.ToUInt16(ClientLength);
+                Buffer += TypeSizes.SHORT;
+            }
+            else
+            {
+                *((float*)Buffer) = (float)P1.X;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)P1.Y;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)P2.X;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)P2.Y;
+                Buffer += TypeSizes.FLOAT;
+
+                *((float*)Buffer) = (float)ClientLength;
+                Buffer += TypeSizes.FLOAT;
+            }
 
             *((short*)Buffer) = RightXOffset;
             Buffer += TypeSizes.SHORT;
@@ -135,10 +190,10 @@ namespace Meridian59.Files.ROO
             *((short*)Buffer) = LeftYOffset;
             Buffer += TypeSizes.SHORT;
 
-            *((ushort*)Buffer) = RightSectorReference;
+            *((ushort*)Buffer) = RightSectorNum;
             Buffer += TypeSizes.SHORT;
 
-            *((ushort*)Buffer) = LeftSectorReference;
+            *((ushort*)Buffer) = LeftSectorNum;
             Buffer += TypeSizes.SHORT;
         }
 
@@ -146,29 +201,49 @@ namespace Meridian59.Files.ROO
         {
             int cursor = StartIndex;
 
-            ServerID = BitConverter.ToInt16(Buffer, cursor);
+            NextWallNumInPlane = BitConverter.ToInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            RightSideReference = BitConverter.ToUInt16(Buffer, cursor);
+            RightSideNum = BitConverter.ToUInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            LeftSideReference = BitConverter.ToUInt16(Buffer, cursor);
+            LeftSideNum = BitConverter.ToUInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            X1 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                p1.X = (Real)BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            Y1 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+                p1.Y = (Real)BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            X2 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+                p2.X = (Real)BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            Y2 = BitConverter.ToInt32(Buffer, cursor);
-            cursor += TypeSizes.INT;
+                p2.Y = (Real)BitConverter.ToInt32(Buffer, cursor);
+                cursor += TypeSizes.INT;
 
-            ClientLength = BitConverter.ToUInt16(Buffer, cursor);
-            cursor += TypeSizes.SHORT;
+                ClientLength = (Real)BitConverter.ToUInt16(Buffer, cursor);
+                cursor += TypeSizes.SHORT;
+            }
+            else
+            {
+                p1.X = (Real)BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                p1.Y = (Real)BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                p2.X = (Real)BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                p2.Y = (Real)BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+
+                ClientLength = (Real)BitConverter.ToSingle(Buffer, cursor);
+                cursor += TypeSizes.FLOAT;
+            }
 
             RightXOffset = BitConverter.ToInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
@@ -182,10 +257,10 @@ namespace Meridian59.Files.ROO
             LeftYOffset = BitConverter.ToInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            RightSectorReference = BitConverter.ToUInt16(Buffer, cursor);
+            RightSectorNum = BitConverter.ToUInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            LeftSectorReference = BitConverter.ToUInt16(Buffer, cursor);
+            LeftSectorNum = BitConverter.ToUInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
             return cursor - StartIndex;
@@ -193,29 +268,49 @@ namespace Meridian59.Files.ROO
 
         public unsafe void ReadFrom(ref byte* Buffer)
         {
-            ServerID = *((short*)Buffer);
+            NextWallNumInPlane = *((short*)Buffer);
             Buffer += TypeSizes.SHORT;
 
-            RightSideReference = *((ushort*)Buffer);
+            RightSideNum = *((ushort*)Buffer);
             Buffer += TypeSizes.SHORT;
 
-            LeftSideReference = *((ushort*)Buffer);
+            LeftSideNum = *((ushort*)Buffer);
             Buffer += TypeSizes.SHORT;
 
-            X1 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+            if (RooVersion < RooFile.VERSIONFLOATCOORDS)
+            {
+                p1.X = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            Y1 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+                p1.Y = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            X2 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+                p2.X = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            Y2 = *((int*)Buffer);
-            Buffer += TypeSizes.INT;
+                p2.Y = *((int*)Buffer);
+                Buffer += TypeSizes.INT;
 
-            ClientLength = *((ushort*)Buffer);
-            Buffer += TypeSizes.SHORT;
+                ClientLength = (Real)(*((ushort*)Buffer));
+                Buffer += TypeSizes.SHORT;
+            }
+            else
+            {
+                p1.X = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                p1.Y = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                p2.X = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                p2.Y = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+
+                ClientLength = *((float*)Buffer);
+                Buffer += TypeSizes.FLOAT;
+            }
 
             RightXOffset = *((short*)Buffer);
             Buffer += TypeSizes.SHORT;
@@ -229,10 +324,10 @@ namespace Meridian59.Files.ROO
             LeftYOffset = *((short*)Buffer);
             Buffer += TypeSizes.SHORT;
 
-            RightSectorReference = *((ushort*)Buffer);
+            RightSectorNum = *((ushort*)Buffer);
             Buffer += TypeSizes.SHORT;
 
-            LeftSectorReference = *((ushort*)Buffer);
+            LeftSectorNum = *((ushort*)Buffer);
             Buffer += TypeSizes.SHORT;
         }
 
@@ -252,55 +347,140 @@ namespace Meridian59.Files.ROO
         #endregion
 
         #region Properties
-        
+        protected V2 p1;
+        protected V2 p2;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public uint RooVersion { get; set; }
+
         /// <summary>
         /// Number of this wall (1 based)
         /// </summary>
         public int Num { get; set; }
         
         /// <summary>
-        /// ID on the server (0 if none)
+        /// 
         /// </summary>
-        public short ServerID { get; set; }
-        
+        public short NextWallNumInPlane { get; set; }
+
         /// <summary>
-        /// Index of right(pos) side in array/list
+        /// First wall point (source)(oldclient FINENESS 1:1024)
         /// </summary>
-        public ushort RightSideReference { get; set; }
-        
+        public V2 P1 { get { return p1; } set { p1 = value; } }
+
         /// <summary>
-        /// Index of left(neg) side in array/list
+        /// Value of P1.X converted from and to integer
         /// </summary>
-        public ushort LeftSideReference { get; set; }
+        public int X1 { get { return (int)p1.X; } set { p1.X = value; } }
 
-        // first point (from)
-        public int X1 { get; set; }
-        public int Y1 { get; set; }
+        /// <summary>
+        /// Value of P1.Y converted from and to integer
+        /// </summary>
+        public int Y1 { get { return (int)p1.Y; } set { p1.Y = value; } }
 
-        // second point (to)
-        public int X2 { get; set; }
-        public int Y2 { get; set; }
+        /// <summary>
+        /// Second wall point (dest)(oldclient FINENESS 1:1024)
+        /// </summary>
+        public V2 P2 { get { return p2; } set { p2 = value; } }
 
-        // length
-        public ushort ClientLength { get; set; }
+        /// <summary>
+        /// Value of P2.X converted from and to integer
+        /// </summary>
+        public int X2 { get { return (int)p2.X; } set { p2.X = value; } }
 
-        // texture offsets
+        /// <summary>
+        /// Value of P2.Y converted from and to integer
+        /// </summary>
+        public int Y2 { get { return (int)p2.Y; } set { p2.Y = value; } }
+
+        /// <summary>
+        /// Length of the wall in server FINENESS (1:64).
+        /// Note: Rather use the length of vector P1P2.
+        /// </summary>
+        public Real ClientLength { get; set; }
+
+        /// <summary>
+        /// XOffset of the texture on the right side
+        /// </summary>
         public short RightXOffset { get; set; }
-        public short LeftXOffset { get; set; }
+        
+        /// <summary>
+        /// YOffset of the texture on the right side
+        /// </summary>
         public short RightYOffset { get; set; }
+        
+        /// <summary>
+        /// XOffset of the texture on the left side
+        /// </summary>
+        public short LeftXOffset { get; set; }
+
+        /// <summary>
+        /// YOffset of the texture on the left side
+        /// </summary>
         public short LeftYOffset { get; set; }
 
-        // indices of "sector" instances
-        public ushort RightSectorReference { get; set; }
-        public ushort LeftSectorReference { get; set; }
+        /// <summary>
+        /// Num (1 based) of sector to the right of this wall.
+        /// 0 is unset.
+        /// </summary>
+        public ushort RightSectorNum { get; set; }
+        
+        /// <summary>
+        /// Num (1 based) of the sector to the left of this wall.
+        /// 0 is unset.
+        /// </summary>
+        public ushort LeftSectorNum { get; set; }
 
+        /// <summary>
+        /// Num (1 based) of the right side of this wall.
+        /// 0 is unset.
+        /// </summary>
+        public ushort RightSideNum { get; set; }
+
+        /// <summary>
+        /// Num (1 based) of the left of left side of this wall.
+        /// 0 is unset.
+        /// </summary>
+        public ushort LeftSideNum { get; set; }
+
+        /// <summary>
+        /// Sector to the right of the wall.
+        /// Will be resolved from RightSectorNum within ResolveIndices().
+        /// </summary>
         public RooSector RightSector { get; set; }
+
+        /// <summary>
+        /// Sector to the left of the wall.
+        /// Will be resolved from LeftSectorNum within ResolveIndices().
+        /// </summary>
         public RooSector LeftSector { get; set; }
+
+        /// <summary>
+        /// Right side of the wall.
+        /// Will be resolved from RightSideNum within ResolveIndices().
+        /// </summary>
         public RooSideDef RightSide { get; set; }
+
+        /// <summary>
+        /// Left side of the wall.
+        /// Will be resolved from LeftSideNum within ResolveIndices().
+        /// </summary>
         public RooSideDef LeftSide { get; set; }
 
-        #region Z-coordinates
+        /// <summary>
+        /// Flags describing special intersection cases.
+        /// </summary>
+        public BowtieFlags BowtieFlags { get; set; }
 
+        /// <summary>
+        /// Next wall on same infinite line.
+        /// Will be resolved from NextWallNumInPlane within ResolveIndices().
+        /// </summary>
+        public RooWall NextWallInPlane { get; set; }
+
+        #region Z-coordinates
         /* 
          * There is an overall of 8 z-coordinates possible for a wall given by
          * its adjacents sectorheights/ceilings, so except for the
@@ -318,97 +498,166 @@ namespace Meridian59.Files.ROO
          */
 
         // Z-coordinates at (X1,Y1) 
-        public int Z0 { get; set; }      /* height of bottom of lower wall */
-        public int Z1 { get; set; }      /* height of top of lower wall / bottom of normal wall */
-        public int Z2 { get; set; }      /* height of top of normal wall / bottom of upper wall */
-        public int Z3 { get; set; }      /* height of top of upper wall */
+        protected Real z0;      /* height of bottom of lower wall */
+        protected Real z1;      /* height of top of lower wall / bottom of normal wall */
+        protected Real z2;      /* height of top of normal wall / bottom of upper wall */
+        protected Real z3;      /* height of top of upper wall */
 
         // Z-coordinates at (X2,Y2)
-        public int ZZ0 { get; set; }     /* height of bottom of lower wall */
-        public int ZZ1 { get; set; }     /* height of top of lower wall / bottom of normal wall */
-        public int ZZ2 { get; set; }     /* height of top of normal wall / bottom of upper wall */
-        public int ZZ3 { get; set; }     /* height of top of upper wall */
+        protected Real zz0;    /* height of bottom of lower wall */
+        protected Real zz1;    /* height of top of lower wall / bottom of normal wall */
+        protected Real zz2;     /* height of top of normal wall / bottom of upper wall */
+        protected Real zz3;     /* height of top of upper wall */
 
+        protected Real z0Neg;       /* height of bottom of lower wall */
+        protected Real z1Neg;       /* height of top of lower wall / bottom of normal wall */
+        protected Real zz0Neg;      /* height of bottom of lower wall */
+        protected Real zz1Neg;      /* height of top of lower wall / bottom of normal wall */
         #endregion
-
-        public BowtieFlags BowtieFlags { get; set; }
-
         #endregion
 
         #region Constructors
-        public RooWall(short ServerID, 
-            ushort RightSideReference, ushort LeftSideReference, 
-            int X1, int Y1, int X2, int Y2, ushort ClientLength, 
-            short RightXOffset, short LeftXOffset, short RightYOffset, short LeftYOffset,
-            ushort RightSectorReference, ushort LeftSectorReference)
+        /// <summary>
+        /// Constructor by values
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="ServerID">Sometimes also called UserID, used to reference wall by server.</param>
+        /// <param name="RightSideNum">Num of the right side of the wall (1=first, 0=unset)</param>
+        /// <param name="LeftSideNum">Num of the left side of the wall (1=first, 0=unset)</param>
+        /// <param name="P1">2D coordinates of startpoint, must be in 1:1024 units</param>
+        /// <param name="P2">2D coordinates of endpoint, must be in 1:1024 units</param>
+        /// <param name="RightXOffset"></param>
+        /// <param name="LeftXOffset"></param>
+        /// <param name="RightYOffset"></param>
+        /// <param name="LeftYOffset"></param>
+        /// <param name="RightSectorNum">Num of the sector right to the wall (1=first, 0=unset)</param>
+        /// <param name="LeftSectorNum">Num of the sector left to the wall (1=first, 0=unset)</param>
+        public RooWall(
+            uint RooVersion,
+            short ServerID, 
+            ushort RightSideNum, 
+            ushort LeftSideNum, 
+            V2 P1, 
+            V2 P2, 
+            short RightXOffset, 
+            short LeftXOffset, 
+            short RightYOffset, 
+            short LeftYOffset,
+            ushort RightSectorNum, 
+            ushort LeftSectorNum)
         {
-            this.ServerID = ServerID;
-            this.RightSideReference = RightSideReference;
-            this.LeftSideReference = LeftSideReference;
-            this.X1 = X1;
-            this.Y1 = Y1;
-            this.X2 = X2;
-            this.Y2 = Y2;
-            this.ClientLength = ClientLength;
+            this.RooVersion = RooVersion;
+            this.NextWallNumInPlane = ServerID;
+            this.RightSideNum = RightSideNum;
+            this.LeftSideNum = LeftSideNum;
+            this.P1 = P1;
+            this.P2 = P2;
+
+            // set clientlength stored in 1:64 units (convert from 1:1024)
+            this.ClientLength = (P1-P2).Length * 0.0625f;
+
             this.RightXOffset = RightXOffset;
             this.LeftXOffset = LeftXOffset;
             this.RightYOffset = RightYOffset;
             this.LeftYOffset = LeftYOffset;
-            this.RightSectorReference = RightSectorReference;
-            this.LeftSectorReference = LeftSectorReference;
+            this.RightSectorNum = RightSectorNum;
+            this.LeftSectorNum = LeftSectorNum;
 
             this.BowtieFlags = new BowtieFlags();
         }
 
-        public RooWall(byte[] Buffer, int StartIndex = 0)
+        /// <summary>
+        /// Constructor by managed parser
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="Buffer"></param>
+        /// <param name="StartIndex"></param>
+        public RooWall(uint RooVersion, byte[] Buffer, int StartIndex = 0)
         {
+            this.RooVersion = RooVersion;
             BowtieFlags = new BowtieFlags();
             ReadFrom(Buffer, StartIndex);
         }
 
-        public unsafe RooWall(ref byte* Buffer)
+        /// <summary>
+        /// Constructor by pointerbased parser
+        /// </summary>
+        /// <param name="RooVersion"></param>
+        /// <param name="Buffer"></param>
+        public unsafe RooWall(uint RooVersion, ref byte* Buffer)
         {
+            this.RooVersion = RooVersion;
             BowtieFlags = new BowtieFlags();
             ReadFrom(ref Buffer);
         }
         #endregion
 
         #region Methods
-
         /// <summary>
-        /// Creates object references from the indices for easier access.
+        /// Creates object references from the Sector/Side Num references.
         /// </summary>
         /// <param name="RooFile"></param>
         public void ResolveIndices(RooFile RooFile)
         {
-            // indices properties are not zero-based, but the arrays/lists are
+            // num properties are not zero-based, but the arrays are
 
             // get reference to right SectorDef
-            if (RightSectorReference > 0 && 
-                RooFile.Sectors.Count > RightSectorReference - 1)
+            if (RightSectorNum > 0 && 
+                RooFile.Sectors.Count > RightSectorNum - 1)
             {
-                RightSector = RooFile.Sectors[RightSectorReference - 1];
+                RightSector = RooFile.Sectors[RightSectorNum - 1];
+
+                // save as adjacent wall
+                if (!RightSector.Walls.Contains(this))
+                    RightSector.Walls.Add(this);
             }
 
             // get reference to left SectorDef
-            if (LeftSectorReference > 0 &&
-                RooFile.Sectors.Count > LeftSectorReference - 1)
+            if (LeftSectorNum > 0 &&
+                RooFile.Sectors.Count > LeftSectorNum - 1)
             {
-                LeftSector = RooFile.Sectors[LeftSectorReference - 1];
+                LeftSector = RooFile.Sectors[LeftSectorNum - 1];
+
+                // save as adjacent wall
+                if (!LeftSector.Walls.Contains(this))
+                    LeftSector.Walls.Add(this);
             }
 
             // get reference to right SideDef
-            if (RightSideReference > 0 &&
-                RooFile.SideDefs.Count > RightSideReference - 1)
+            if (RightSideNum > 0 &&
+                RooFile.SideDefs.Count > RightSideNum - 1)
             {
-                RightSide = RooFile.SideDefs[RightSideReference - 1];
+                RightSide = RooFile.SideDefs[RightSideNum - 1];
+
+                // save as adjacent side
+                if (RightSector != null && !RightSector.Sides.Contains(RightSide))
+                    RightSector.Sides.Add(RightSide);
+
+                // save as adjacent side
+                if (LeftSector != null && !LeftSector.Sides.Contains(RightSide))
+                    LeftSector.Sides.Add(RightSide);
             }
 
             // get reference to left SideDef
-            if (LeftSideReference > 0 &&
-                RooFile.SideDefs.Count > LeftSideReference - 1)
+            if (LeftSideNum > 0 &&
+                RooFile.SideDefs.Count > LeftSideNum - 1)
             {
-                LeftSide = RooFile.SideDefs[LeftSideReference - 1];
+                LeftSide = RooFile.SideDefs[LeftSideNum - 1];
+
+                // save as adjacent side
+                if (RightSector != null && !RightSector.Sides.Contains(LeftSide))
+                    RightSector.Sides.Add(LeftSide);
+
+                // save as adjacent side
+                if (LeftSector != null && !LeftSector.Sides.Contains(LeftSide))
+                    LeftSector.Sides.Add(LeftSide);
+            }
+
+            // get reference to next wall in same plane
+            if (NextWallNumInPlane > 0 &&
+                RooFile.Walls.Count > NextWallNumInPlane - 1)
+            {
+                NextWallInPlane = RooFile.Walls[NextWallNumInPlane - 1];
             }
         }
 
@@ -422,40 +671,40 @@ namespace Meridian59.Files.ROO
             // no sectors? we're screwed, use defaults and return
             if (RightSector == null && LeftSector == null)
             {
-                Z0 = Z1 = 0;
-                Z2 = Z3 = GeometryConstants.FINENESS;
-                ZZ0 = ZZ1 = 0;
-                ZZ2 = ZZ3 = GeometryConstants.FINENESS;
+                z0 = z1 = 0.0f;
+                z2 = z3 = (Real)GeometryConstants.FINENESS;
+                zz0 = zz1 = 0.0f;
+                zz2 = zz3 = (Real)GeometryConstants.FINENESS;
                 return;
             }
 
             // only left sector? use heights from there and return
             if (RightSector == null)
             {
-                Z0 = Z1 = LeftSector.CalculateFloorHeight(X1, Y1);
-                Z2 = Z3 = LeftSector.CalculateCeilingHeight(X1, Y1);
-                ZZ0 = ZZ1 = LeftSector.CalculateFloorHeight(X2, Y2);
-                ZZ2 = ZZ3 = LeftSector.CalculateCeilingHeight(X2, Y2);
+                z0 = z1 = LeftSector.CalculateFloorHeight(P1.X, P1.Y);
+                z2 = z3 = LeftSector.CalculateCeilingHeight(P1.X, P1.Y);
+                zz0 = zz1 = LeftSector.CalculateFloorHeight(P2.X, P2.Y);
+                zz2 = zz3 = LeftSector.CalculateCeilingHeight(P2.X, P2.Y);
                 return;
             }
 
             // only right sector? use heights from there and return
             if (LeftSector == null)
             {
-                Z0 = Z1 = RightSector.CalculateFloorHeight(X1, Y1);
-                Z2 = Z3 = RightSector.CalculateCeilingHeight(X1, Y1);
-                ZZ0 = ZZ1 = RightSector.CalculateFloorHeight(X2, Y2);
-                ZZ2 = ZZ3 = RightSector.CalculateCeilingHeight(X2, Y2);
+                z0 = z1 = RightSector.CalculateFloorHeight(P1.X, P1.Y);
+                z2 = z3 = RightSector.CalculateCeilingHeight(P1.X, P1.Y);
+                zz0 = zz1 = RightSector.CalculateFloorHeight(P2.X, P2.Y);
+                zz2 = zz3 = RightSector.CalculateCeilingHeight(P2.X, P2.Y);
                 return;
             }
 
             // --  finally, if there are both sectors available ---
 
             // start with the floor handling
-            int S1_height0 = RightSector.CalculateFloorHeight(X1, Y1);
-            int S2_height0 = LeftSector.CalculateFloorHeight(X1, Y1);
-            int S1_height1 = RightSector.CalculateFloorHeight(X2, Y2);
-            int S2_height1 = LeftSector.CalculateFloorHeight(X2, Y2);
+            Real S1_height0 = RightSector.CalculateFloorHeight(P1.X, P1.Y);
+            Real S2_height0 = LeftSector.CalculateFloorHeight(P1.X, P1.Y);
+            Real S1_height1 = RightSector.CalculateFloorHeight(P2.X, P2.Y);
+            Real S2_height1 = LeftSector.CalculateFloorHeight(P2.X, P2.Y);
 
             // S1 is above S2 at first endpoint
             if (S1_height0 > S2_height0)
@@ -465,21 +714,32 @@ namespace Meridian59.Files.ROO
                     // normal wall - S1 higher at both ends
                     BowtieFlags.Value =  0;
 
-                    Z1 = S1_height0;
-                    ZZ1 = S1_height1;
-                    Z0 = S2_height0;
-                    ZZ0 = S2_height1;
+                    z1 = S1_height0;
+                    zz1 = S1_height1;
+                    z0 = S2_height0;
+                    zz0 = S2_height1;
                 }
                 else
                 {
                     // bowtie handling
                     BowtieFlags.IsBelowPos = true;
 
-                    // no extra zNeg here
-                    Z1 = S1_height0;
-                    ZZ1 = S2_height1;
-                    Z0 = S2_height0;
-                    ZZ0 = S1_height1;
+                    // this is the variant for gD3DEnabled in the old code
+                    z1 = S1_height0;
+                    zz1 = S1_height1;
+                    z0 = S2_height0;
+                    zz0 = S1_height1;
+
+                    z1Neg = S2_height0;
+                    zz1Neg = S2_height1;
+                    z0Neg = S2_height0;
+                    zz0Neg = S1_height1;
+
+                    // other variant
+                    /*z1 = S1_height0;
+                    zz1 = S2_height1;
+                    z0 = S2_height0;
+                    zz0 = S1_height1;*/
                 }
             }
 
@@ -491,30 +751,40 @@ namespace Meridian59.Files.ROO
                     // normal wall - S2 higher at both ends
                     BowtieFlags.Value = 0;
 
-                    Z1 = S2_height0;
-                    ZZ1 = S2_height1;
-                    Z0 = S1_height0;
-                    ZZ0 = S1_height1;
+                    z1 = S2_height0;
+                    zz1 = S2_height1;
+                    z0 = S1_height0;
+                    zz0 = S1_height1;
                 }
                 else
                 {
                     // bowtie handling
                     BowtieFlags.IsBelowNeg = true;
 
-                    // no extra zNeg here
-                    Z1 = S2_height0;
-                    ZZ1 = S1_height1;
-                    Z0 = S1_height0;
-                    ZZ0 = S2_height1;
+                    // this is the variant for gD3DEnabled in the old code
+                    z1 = S1_height0;
+                    zz1 = S1_height1;
+                    z0 = S1_height0;
+                    zz0 = S2_height1;
 
+                    z1Neg = S2_height0;
+                    zz1Neg = S2_height1;
+                    z0Neg = S1_height0;
+                    zz0Neg = S2_height1;
+
+                    // other variant
+                    /*z1 = S2_height0;
+                    zz1 = S1_height1;
+                    z0 = S1_height0;
+                    zz0 = S2_height1;*/
                 }
             }
 
             // start with ceiling handling
-            S1_height0 = RightSector.CalculateCeilingHeight(X1, Y1);
-            S2_height0 = LeftSector.CalculateCeilingHeight(X1, Y1);
-            S1_height1 = RightSector.CalculateCeilingHeight(X2, Y2);
-            S2_height1 = LeftSector.CalculateCeilingHeight(X2, Y2);
+            S1_height0 = RightSector.CalculateCeilingHeight(P1.X, P1.Y);
+            S2_height0 = LeftSector.CalculateCeilingHeight(P1.X, P1.Y);
+            S1_height1 = RightSector.CalculateCeilingHeight(P2.X, P2.Y);
+            S2_height1 = LeftSector.CalculateCeilingHeight(P2.X, P2.Y);
 
             if (S1_height0 > S2_height0)
             {
@@ -524,10 +794,10 @@ namespace Meridian59.Files.ROO
                     //wall->bowtie_bits &= (BYTE)~BT_ABOVE_BOWTIE; // Clear above bowtie bits
                     BowtieFlags.IsAboveBowtie = false;
 
-                    Z3 = S1_height0;
-                    ZZ3 = S1_height1;
-                    Z2 = S2_height0;
-                    ZZ2 = S2_height1;
+                    z3 = S1_height0;
+                    zz3 = S1_height1;
+                    z2 = S2_height0;
+                    zz2 = S2_height1;
                 }
                 else
                 {
@@ -535,10 +805,10 @@ namespace Meridian59.Files.ROO
                     //wall->bowtie_bits |= (BYTE)BT_ABOVE_POS; // positive sector is on top at endpoint 0
                     BowtieFlags.IsAbovePos = true;
 
-                    Z3 = S1_height0;
-                    ZZ3 = S2_height1;
-                    Z2 = S2_height0;
-                    ZZ2 = S1_height1;
+                    z3 = S1_height0;
+                    zz3 = S2_height1;
+                    z2 = S2_height0;
+                    zz2 = S1_height1;
                 }
             }
             else
@@ -549,10 +819,10 @@ namespace Meridian59.Files.ROO
                     //wall->bowtie_bits &= (BYTE)~BT_ABOVE_BOWTIE;
                     BowtieFlags.IsAboveBowtie = false;
 
-                    Z3 = S2_height0;
-                    ZZ3 = S2_height1;
-                    Z2 = S1_height0;
-                    ZZ2 = S1_height1;
+                    z3 = S2_height0;
+                    zz3 = S2_height1;
+                    z2 = S1_height0;
+                    zz2 = S1_height1;
                 }
                 else
                 {
@@ -560,45 +830,22 @@ namespace Meridian59.Files.ROO
                     //wall->bowtie_bits |= (BYTE)BT_ABOVE_NEG; // negative sector is on top at endpoint 0
                     BowtieFlags.IsAboveNeg = true;
 
-                    Z3 = S2_height0;
-                    ZZ3 = S1_height1;
-                    Z2 = S1_height0;
-                    ZZ2 = S2_height1;
+                    z3 = S2_height0;
+                    zz3 = S1_height1;
+                    z2 = S1_height0;
+                    zz2 = S2_height1;
                 }
             }
         }
-
         #endregion
 
-        #region V2 / Renderstuff
-
-        /// <summary>
-        /// Gets first point of wall (2D)
-        /// </summary>
-        /// <returns></returns>
-        public V2 GetP1()
-        {
-            return new V2(X1, Y1);
-        }
-
-        /// <summary>
-        /// Gets second point of wall (2D)
-        /// </summary>
-        /// <returns></returns>
-        public V2 GetP2()
-        {
-            return new V2(X2, Y2);
-        }
-
+        #region V2 / Renderstuff       
         /// <summary>
         /// Gets line segment of wall (2D)
         /// </summary>
         /// <returns></returns>
         public V2 GetP1P2()
         {
-            V2 P1 = GetP1();
-            V2 P2 = GetP2();
-
             return P2 - P1;
         }
 
@@ -610,63 +857,81 @@ namespace Meridian59.Files.ROO
         /// <param name="End">A 2D location</param>
         /// <param name="PlayerHeight">Height of the player for ceiling collisions</param>
         /// <returns></returns>
-        public bool IsBlocking(V3 Start, V2 End, Real PlayerHeight)
-        {
-            V2 P1 = GetP1();
-            V2 P2 = GetP2();
+        public bool IsBlockingMove(V3 Start, V2 End, Real PlayerHeight)
+        {          
+            // get distance of end to finite line segment
+            Real distEnd = End.MinSquaredDistanceToLineSegment(P1, P2);
 
-            V2 Start2D = new V2(Start.X, Start.Z);
+            // end is far enough away, no block
+            if (distEnd >= GeometryConstants.WALLMINDISTANCE2)
+                return false;
 
-            // calculate the sides of the points (returns -1, 0 or 1)
-            int startside = Start2D.GetSide(P1, P2);
-            int endside = End.GetSide(P1, P2);
+            /*************************************************************************/
+            // end is too 'too' close to wall
+            
+            V2 start2D      = new V2(Start.X, Start.Z);
+            int startside   = start2D.GetSide(P1, P2);
+            int endside     = End.GetSide(P1, P2);
+            Real endheight;
+            ushort bgfbmp;
 
-            // if points are not on same side
-            // the infinite lines cross
-            if (startside != endside)
-            {
-                // verify also the finite line segments cross
-                V2 intersect;
-                
-                if (MathUtil.IntersectLineLine(Start2D, End, P1, P2, out intersect))
-                {
-                    // verify the side we've crossed is flaggged as "nonpassable"
-                    // if so, we actually have a collision
-                    if ((startside < 0 && LeftSide != null && !LeftSide.Flags.IsPassable) ||
-                        (startside > 0 && RightSide != null && !RightSide.Flags.IsPassable))
-                    {
-                        return true;
-                    }
+            /*************************************************************************/
+            // allow moving away from wall
 
-                    // still check the stepheight from oldheight to new floor if passable
-                    // for too high steps                    
-                    int endheight = 0;
-                    Real diff;
+            if (startside == endside)
+            { 
+                Real distStart = start2D.MinSquaredDistanceToLineSegment(P1, P2);
 
-                    if (endside <= 0 && LeftSector != null)
-                        endheight = LeftSector.CalculateFloorHeight((int)End.X, (int)End.Y, true);
-
-                    else if (endside > 0 && RightSector != null)
-                        endheight = RightSector.CalculateFloorHeight((int)End.X, (int)End.Y, true);
-
-                    diff = endheight - Start.Y;
-
-                    // diff is bigger than max. step height, we have a collision
-                    if (diff > GeometryConstants.MAXSTEPHEIGHT)                   
-                        return true;
-
-                    // check the ceiling heights
-                    if (endside <= 0 && LeftSector != null)
-                        endheight = LeftSector.CalculateCeilingHeight((int)End.X, (int)End.Y);
-
-                    else if (endside > 0 && RightSector != null)
-                        endheight = RightSector.CalculateCeilingHeight((int)End.X, (int)End.Y);
-
-                    // diff is bigger than max. step height, we have a collision
-                    if (endheight < Start.Y + PlayerHeight)
-                        return true;
-                }
+                if (distEnd > distStart)
+                    return false;
             }
+
+            /*************************************************************************/
+            // prevent moving through non-passable side
+
+            if ((startside < 0 && LeftSide != null && !LeftSide.Flags.IsPassable) ||
+                (startside > 0 && RightSide != null && !RightSide.Flags.IsPassable))
+                return true;         
+
+            /*************************************************************************/
+            // check step-height
+
+            endheight = 0.0f;
+
+            if (startside >= 0)
+            {
+                endheight = (LeftSector != null) ? LeftSector.CalculateFloorHeight(End.X, End.Y, true) : 0.0f;
+                bgfbmp = (RightSide != null) ? RightSide.LowerTexture : (ushort)0;
+            }
+            else
+            {
+                endheight = (RightSector != null) ? RightSector.CalculateFloorHeight(End.X, End.Y, true) : 0.0f;
+                bgfbmp = (LeftSide != null) ? LeftSide.LowerTexture : (ushort)0;
+            }
+
+            if (bgfbmp > 0 && (endheight - Start.Y > GeometryConstants.MAXSTEPHEIGHT))
+                return true;
+            
+            /*************************************************************************/
+            // check head collision with ceiling
+
+            endheight = 0.0f;
+
+            if (startside >= 0)
+            {
+                endheight = (LeftSector != null) ? LeftSector.CalculateCeilingHeight(End.X, End.Y) : 0.0f;
+                bgfbmp = (RightSide != null) ? RightSide.UpperTexture : (ushort)0;
+            }
+            else
+            {
+                endheight = (RightSector != null) ? RightSector.CalculateCeilingHeight(End.X, End.Y) : 0.0f;
+                bgfbmp = (LeftSide != null) ? LeftSide.UpperTexture : (ushort)0;
+            }
+
+            if (bgfbmp > 0 && (endheight < Start.Y + PlayerHeight))
+                return true;
+
+            /*************************************************************************/
 
             return false;
         }
@@ -680,9 +945,6 @@ namespace Meridian59.Files.ROO
         /// <returns>True if blocked, false if OK</returns>
         public bool IsBlockingSight(V3 Start, V3 End)
         {
-            V2 P1 = GetP1();
-            V2 P2 = GetP2();
-
             // 2D
             V2 Start2D = new V2(Start.X, Start.Z);
             V2 End2D = new V2(End.X, End.Z);
@@ -697,8 +959,13 @@ namespace Meridian59.Files.ROO
             {
                 // verify also the finite line segments cross
                 V2 intersect;
-                
-                if (MathUtil.IntersectLineLine(Start2D, End2D, P1, P2, out intersect))
+                LineLineIntersectionType intersecttype = 
+                    MathUtil.IntersectLineLine(Start2D, End2D, P1, P2, out intersect);
+
+                if (intersecttype == LineLineIntersectionType.OneIntersection ||
+                    intersecttype == LineLineIntersectionType.OneBoundaryPoint ||
+                    intersecttype == LineLineIntersectionType.FullyCoincide ||
+                    intersecttype == LineLineIntersectionType.PartiallyCoincide)
                 {
                     // the vector/ray between start and end
                     V3 diff = End - Start;
@@ -729,31 +996,31 @@ namespace Meridian59.Files.ROO
                     // compare height with wallheights
                     // use average of both endpoints (in case its sloped)
                     // do not care about the sides
-                    int h3 = (Z3 + ZZ3) / 2;
-                    int h2 = (Z2 + ZZ2) / 2;
-                    int h1 = (Z1 + ZZ1) / 2;
-                    int h0 = (Z0 + ZZ0) / 2;
+                    Real h3 = (z3 + zz3) / 2.0f;
+                    Real h2 = (z2 + zz2) / 2.0f;
+                    Real h1 = (z1 + zz1) / 2.0f;
+                    Real h0 = (z0 + zz0) / 2.0f;
                     bool a, b;
                     
                     // test upper part
-                    a = (LeftSide != null && LeftSide.ResourceUpper != null && (LeftSide.Flags.IsNoLookThrough || !LeftSide.Flags.IsTransparent));
-                    b = (RightSide != null && RightSide.ResourceUpper != null && (RightSide.Flags.IsNoLookThrough || !RightSide.Flags.IsTransparent));
+                    a = (startside <= 0 && LeftSide != null && LeftSide.ResourceUpper != null && (LeftSide.Flags.IsNoLookThrough || !LeftSide.Flags.IsTransparent));
+                    b = (startside >= 0 && RightSide != null && RightSide.ResourceUpper != null && (RightSide.Flags.IsNoLookThrough || !RightSide.Flags.IsTransparent));
                     if ((a || b) &&
                         rayheight < h3 &&
                         rayheight > h2)
                         return true;
 
                     // test middle part
-                    a = (LeftSide != null && LeftSide.ResourceMiddle != null && (LeftSide.Flags.IsNoLookThrough || !LeftSide.Flags.IsTransparent));
-                    b = (RightSide != null && RightSide.ResourceMiddle != null && (RightSide.Flags.IsNoLookThrough || !RightSide.Flags.IsTransparent));
+                    a = (startside <= 0 && LeftSide != null && LeftSide.ResourceMiddle != null && (LeftSide.Flags.IsNoLookThrough || !LeftSide.Flags.IsTransparent));
+                    b = (startside >= 0 && RightSide != null && RightSide.ResourceMiddle != null && (RightSide.Flags.IsNoLookThrough || !RightSide.Flags.IsTransparent));
                     if ((a || b) &&
                         rayheight < h2 &&
                         rayheight > h1)
                         return true;
 
                     // test lower part (nolookthrough)
-                    a = (LeftSide != null && LeftSide.ResourceLower != null);
-                    b = (RightSide != null && RightSide.ResourceLower != null);
+                    a = (startside <= 0 && LeftSide != null && LeftSide.ResourceLower != null);
+                    b = (startside >= 0 && RightSide != null && RightSide.ResourceLower != null);
                     if ((a || b) &&
                         rayheight < h1 &&
                         rayheight > h0)
@@ -789,9 +1056,9 @@ namespace Meridian59.Files.ROO
         /// <param name="TexShrink">Texture shrink</param>
         /// <param name="Scale">Additional scale for vertices</param>
         /// <returns></returns>
-        public RenderInfo GetRenderInfo(WallPartType PartType, bool IsLeftSide, int TexWidth, int TexHeight, int TexShrink, Real Scale = 1.0f)
+        public VertexData GetVertexData(WallPartType PartType, bool IsLeftSide, int TexWidth, int TexHeight, int TexShrink, Real Scale = 1.0f)
         {
-            RenderInfo RI = new RenderInfo();
+            VertexData RI = new VertexData();
             bool drawTopDown = true;
             RooSideDefFlags flags;
             int xoffset = 0;
@@ -800,15 +1067,15 @@ namespace Meridian59.Files.ROO
             // fill vars based on left or right side
             if (!IsLeftSide)
             {
-                RI.P0.X = X1;
-                RI.P3.X = X2;
-                RI.P1.X = X1;
-                RI.P2.X = X2;
+                RI.P0.X = P1.X;
+                RI.P3.X = P2.X;
+                RI.P1.X = P1.X;
+                RI.P2.X = P2.X;
 
-                RI.P0.Y = Y1;
-                RI.P3.Y = Y2;
-                RI.P1.Y = Y1;
-                RI.P2.Y = Y2;
+                RI.P0.Y = P1.Y;
+                RI.P3.Y = P2.Y;
+                RI.P1.Y = P1.Y;
+                RI.P2.Y = P2.Y;
 
                 flags = RightSide.Flags;
                 xoffset = RightXOffset;
@@ -817,41 +1084,50 @@ namespace Meridian59.Files.ROO
                 switch (PartType)
                 {
                     case WallPartType.Upper:
-                        RI.P0.Z = Z3;
-                        RI.P3.Z = ZZ3;
-                        RI.P1.Z = Z2;
-                        RI.P2.Z = ZZ2;
+                        RI.P0.Z = z3;
+                        RI.P3.Z = zz3;
+                        RI.P1.Z = z2;
+                        RI.P2.Z = zz2;
                         drawTopDown = !RightSide.Flags.IsAboveBottomUp;
                         break;
 
                     case WallPartType.Middle:
-                        RI.P0.Z = Z2;
-                        RI.P3.Z = ZZ2;
-                        RI.P1.Z = Z1;
-                        RI.P2.Z = ZZ1;
+                        RI.P0.Z = z2;
+                        RI.P3.Z = zz2;
+                        RI.P1.Z = z1;
+                        RI.P2.Z = zz1;
                         drawTopDown = RightSide.Flags.IsNormalTopDown;
                         break;
 
                     case WallPartType.Lower:
-                        RI.P0.Z = Z1;
-                        RI.P3.Z = ZZ1;
-                        RI.P1.Z = Z0;
-                        RI.P2.Z = ZZ0;
+                        if (BowtieFlags.IsBelowPos || BowtieFlags.IsBelowNeg)
+                        {
+                            RI.P0.Z = z1Neg;
+                            RI.P3.Z = zz1Neg;
+                        }
+                        else
+                        {
+                            RI.P0.Z = z1;
+                            RI.P3.Z = zz1;
+                        }
+
+                        RI.P1.Z = z0;
+                        RI.P2.Z = zz0;
                         drawTopDown = RightSide.Flags.IsBelowTopDown;
                         break;
                 }
             }
             else
             {
-                RI.P0.X = X2;
-                RI.P3.X = X1;
-                RI.P1.X = X2;
-                RI.P2.X = X1;
+                RI.P0.X = P2.X;
+                RI.P3.X = P1.X;
+                RI.P1.X = P2.X;
+                RI.P2.X = P1.X;
 
-                RI.P0.Y = Y2;
-                RI.P3.Y = Y1;
-                RI.P1.Y = Y2;
-                RI.P2.Y = Y1;
+                RI.P0.Y = P2.Y;
+                RI.P3.Y = P1.Y;
+                RI.P1.Y = P2.Y;
+                RI.P2.Y = P1.Y;
 
                 flags = LeftSide.Flags;
                 xoffset = LeftXOffset;
@@ -860,26 +1136,26 @@ namespace Meridian59.Files.ROO
                 switch (PartType)
                 {
                     case WallPartType.Upper:
-                        RI.P0.Z = ZZ3;
-                        RI.P3.Z = Z3;
-                        RI.P1.Z = ZZ2;
-                        RI.P2.Z = Z2;
+                        RI.P0.Z = zz3;
+                        RI.P3.Z = z3;
+                        RI.P1.Z = zz2;
+                        RI.P2.Z = z2;
                         drawTopDown = !LeftSide.Flags.IsAboveBottomUp;
                         break;
 
                     case WallPartType.Middle:
-                        RI.P0.Z = ZZ2;
-                        RI.P3.Z = Z2;
-                        RI.P1.Z = ZZ1;
-                        RI.P2.Z = Z1;
+                        RI.P0.Z = zz2;
+                        RI.P3.Z = z2;
+                        RI.P1.Z = zz1;
+                        RI.P2.Z = z1;
                         drawTopDown = LeftSide.Flags.IsNormalTopDown;
                         break;
 
                     case WallPartType.Lower:
-                        RI.P0.Z = ZZ1;
-                        RI.P3.Z = Z1;
-                        RI.P1.Z = ZZ0;
-                        RI.P2.Z = Z0;
+                        RI.P0.Z = zz1;
+                        RI.P3.Z = z1;
+                        RI.P1.Z = zz0;
+                        RI.P2.Z = z0;
                         drawTopDown = LeftSide.Flags.IsBelowTopDown;
                         break;
                 }
@@ -893,7 +1169,7 @@ namespace Meridian59.Files.ROO
 
             // Start with UV calculation, see d3drender.c ---           
             Real u1 = (Real)xoffset * (Real)TexShrink * invHeight;
-            Real u2 = u1 + ((Real)ClientLength * (Real)TexShrink * invHeight);
+            Real u2 = u1 + (ClientLength * (Real)TexShrink * invHeight);
 
             // set U
             RI.UV0.X = u1;
@@ -930,8 +1206,8 @@ namespace Meridian59.Files.ROO
                 {
                     RI.UV1.Y = 1.0f - ((Real)yoffset * (Real)TexShrink * invWidth);
                     RI.UV2.Y = 1.0f - ((Real)yoffset * (Real)TexShrink * invWidth);
-                    RI.UV1.Y -= ((Real)RI.P1.Y - bottom) * (Real)TexShrink * invWidthFudge;
-                    RI.UV2.Y -= ((Real)RI.P2.Y - bottom) * (Real)TexShrink * invWidthFudge;
+                    RI.UV1.Y -= ((Real)RI.P1.Z - bottom) * (Real)TexShrink * invWidthFudge;
+                    RI.UV2.Y -= ((Real)RI.P2.Z - bottom) * (Real)TexShrink * invWidthFudge;
                 }
 
                 RI.UV0.Y = RI.UV1.Y - ((Real)(RI.P0.Z - RI.P1.Z) * (Real)TexShrink * invWidthFudge);
@@ -1049,61 +1325,93 @@ namespace Meridian59.Files.ROO
         }
 
         /// <summary>
-        /// RenderInformation for a PART of a RooWall
+        /// Splits this wall into two using infinite line given by Q1Q2.
         /// </summary>
-        public class RenderInfo
+        /// <param name="Q1"></param>
+        /// <param name="Q2"></param>
+        /// <returns>Item1: P1 to I. Item2: I to P2</returns>
+        public Tuple<RooWall, RooWall> Split(V2 Q1, V2 Q2)
         {
-            public V3 P0, P1, P2, P3;
-            public V2 UV0, UV1, UV2, UV3;
-            public V3 Normal;
+            V2 intersect;
 
-            public RenderInfo()
-            {
-                P0 = new V3(0.0f, 0.0f, 0.0f);
-                P3 = new V3(0.0f, 0.0f, 0.0f);
-                P1 = new V3(0.0f, 0.0f, 0.0f);
-                P2 = new V3(0.0f, 0.0f, 0.0f);
+            // intersect this wall (finite line) with the infinite line given by Q1Q2
+            LineInfiniteLineIntersectionType intersecttype = 
+                MathUtil.IntersectLineInfiniteLine(P1, P2, Q1, Q2, out intersect);
 
-                // defaults
-                UV0 = new V2(0.0f, 0.0f);
-                UV1 = new V2(0.0f, 1.0f);
-                UV3 = new V2(1.0f, 0.0f);
-                UV2 = new V2(1.0f, 1.0f);
+            // must have a real intersection, not only boundarypoint or even coincide
+            if (intersecttype != LineInfiniteLineIntersectionType.OneIntersection)
+                return null;
 
-                Normal = new V3(0.0f, 0.0f, 0.0f);
-            }
+            /*****************************************************************/
 
-            /// <summary>
-            /// Scales the UV coordinates so they match
-            /// increased pow2 width / heights.
-            /// NOTE: This does not work if U or V is bigger than 1,
-            /// because it would use empty areas when clamping (repeating)
-            /// </summary>
-            /// <param name="Width">Non-Pow2 Width</param>
-            /// <param name="Height">Non-Po2 Height</param>
-            public void ScaleUVPow2(uint Width, uint Height)
-            {
-                uint pow2width = MathUtil.NextPowerOf2(Width);
-                uint pow2height = MathUtil.NextPowerOf2(Height);
+            // 1) Piece from P1 to intersection
+            RooWall wall1 = new RooWall(
+                RooVersion,
+                NextWallNumInPlane,
+                RightSideNum,
+                LeftSideNum,
+                P1,
+                intersect,
+                RightXOffset,  // readjust below
+                LeftXOffset,   // readjust below
+                RightYOffset,  // readjust below
+                LeftYOffset,   // readjust below
+                RightSectorNum,
+                LeftSectorNum
+                );
 
-                Real wr = (Real)Width / (Real)pow2width;
-                Real hr = (Real)Height / (Real)pow2height;
+            // also keep references of old wall
+            wall1.RightSector = RightSector;
+            wall1.LeftSector = LeftSector;
+            wall1.RightSide = RightSide;
+            wall1.LeftSide = LeftSide;
+            wall1.BowtieFlags = BowtieFlags;
+            wall1.CalculateWallSideHeights();
 
-                UV0.X *= wr;
-                UV0.Y *= hr;
+            /*****************************************************************/
 
-                UV1.X *= wr;
-                UV1.Y *= hr;
+            // 2) Piece from intersection to P2
+            RooWall wall2 = new RooWall(
+                RooVersion,
+                NextWallNumInPlane,
+                RightSideNum,
+                LeftSideNum,
+                intersect,
+                P2,
+                RightXOffset,  // readjust below
+                LeftXOffset,   // readjust below
+                RightYOffset,  // readjust below
+                LeftYOffset,   // readjust below
+                RightSectorNum,
+                LeftSectorNum
+                );
 
-                UV3.X *= wr;
-                UV3.Y *= hr;
+            // also keep references of old wall
+            wall2.RightSector = RightSector;
+            wall2.LeftSector = LeftSector;
+            wall2.RightSide = RightSide;
+            wall2.LeftSide = LeftSide;
+            wall2.BowtieFlags = BowtieFlags;
+            wall2.CalculateWallSideHeights();
 
-                UV2.X *= wr;
-                UV2.Y *= hr;              
-            }
+            /*****************************************************************/
+
+            // 3) Readjust texture offsets to accoutn for split
+
+            // RightSide
+            if (wall1.RightSide != null && wall1.RightSide.Flags.IsBackwards)
+                wall1.RightXOffset += (short)wall2.ClientLength;
+            else wall2.RightXOffset += (short)wall1.ClientLength;
+
+            // LeftSide (Do this backwards, because client exchanges vertices of negative walls)
+            if (wall1.LeftSide != null && wall1.LeftSide.Flags.IsBackwards)
+                wall2.LeftXOffset += (short)wall1.ClientLength;
+            else wall1.LeftXOffset += (short)wall2.ClientLength;
+
+            /*****************************************************************/
+
+            return new Tuple<RooWall, RooWall>(wall1, wall2);
         }
-
         #endregion
-
     }
 }

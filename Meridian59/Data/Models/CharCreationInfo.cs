@@ -943,47 +943,47 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public virtual void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public virtual void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             // male 
 
             foreach (ResourceIDBGF obj in maleHairIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
-            maleSkullID.ResolveStrings(StringResources, RaiseChangedEvent);
+			maleSkullID.ResolveStrings(StringResources, RaiseChangedEvent);
 
             foreach (ResourceIDBGF obj in maleEyeIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
             foreach (ResourceIDBGF obj in maleNoseIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
             foreach (ResourceIDBGF obj in maleMouthIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
             // female 
 
             foreach (ResourceIDBGF obj in femaleHairIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
-            femaleSkullID.ResolveStrings(StringResources, RaiseChangedEvent);
+			femaleSkullID.ResolveStrings(StringResources, RaiseChangedEvent);
 
             foreach (ResourceIDBGF obj in femaleEyeIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
             foreach (ResourceIDBGF obj in femaleNoseIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
             foreach (ResourceIDBGF obj in femaleMouthIDs)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
 
             // spells/skills
             
             foreach (AvatarCreatorSpellObject obj in spells)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
             
             foreach (AvatarCreatorSkillObject obj in skills)
-                obj.ResolveStrings(StringResources, RaiseChangedEvent);
+				obj.ResolveStrings(StringResources, RaiseChangedEvent);
         }
         #endregion
 
@@ -1366,6 +1366,81 @@ namespace Meridian59.Data.Models
         }
 
         /// <summary>
+        /// Sets attributes such as Might, Stamina, ... to a
+        /// predefined set suitable for mages.
+        /// </summary>
+        public void SetAttributesToMage()
+        {
+            // set to 0 first
+            Might = Intellect = Stamina = Agility = Mysticism = Aim = ATTRIBUTE_MINVALUE;
+#if !VANILLA
+            Might       = 40;
+            Intellect   = 50;
+            Stamina     = 45;
+            Agility     = 15;
+            Mysticism   = 45;
+            Aim         = 5;
+#else           
+            Might       = 35;
+            Intellect   = 40;
+            Stamina     = 50;
+            Agility     = 15;
+            Mysticism   = 45;
+            Aim         = 15;
+#endif
+        }
+
+        /// <summary>
+        /// Sets attributes such as Might, Stamina, ... to a
+        /// predefined set suitable for warriors.
+        /// </summary>
+        public void SetAttributesToWarrior()
+        {
+            // set to 0 first
+            Might = Intellect = Stamina = Agility = Mysticism = Aim = ATTRIBUTE_MINVALUE;
+#if !VANILLA
+            Might       = 40;
+            Intellect   = 10;
+            Stamina     = 50;
+            Agility     = 40;
+            Mysticism   = 10;
+            Aim         = 50;
+#else           
+            Might       = 50;
+            Intellect   = 10;
+            Stamina     = 50;
+            Agility     = 30;
+            Mysticism   = 10;
+            Aim         = 50;
+#endif
+        }
+
+        /// <summary>
+        /// Sets attributes such as Might, Stamina, ... to a
+        /// predefined set suitable for hybrids.
+        /// </summary>
+        public void SetAttributesToHybrid()
+        {
+            // set to 0 first
+            Might = Intellect = Stamina = Agility = Mysticism = Aim = ATTRIBUTE_MINVALUE;
+#if !VANILLA
+            Might       = 40;
+            Intellect   = 25;
+            Stamina     = 50;
+            Agility     = 15;
+            Mysticism   = 35;
+            Aim         = 35;
+#else           
+            Might       = 40;
+            Intellect   = 25;
+            Stamina     = 35;
+            Agility     = 25;
+            Mysticism   = 35;
+            Aim         = 40;
+#endif
+        }
+
+        /// <summary>
         /// Adjusts the ExampleModel instance
         /// </summary>
         /// <param name="Gender"></param>
@@ -1385,8 +1460,8 @@ namespace Meridian59.Data.Models
             int MouthIndex = 0)
         {
             gender = Gender;
-            skinColor = skinColors[SkinColorIndex];
-            hairColor = hairColors[HairColorIndex];
+            skinColor = (skinColors.Length > SkinColorIndex) ? skinColors[SkinColorIndex] : (byte)0;
+            hairColor = (hairColors.Length > HairColorIndex) ? hairColors[HairColorIndex] : (byte)0;
 
             ResourceIDBGF skullID;
             ResourceIDBGF[] hairIDs;
@@ -1466,27 +1541,27 @@ namespace Meridian59.Data.Models
             subOvSkull.Name = skullID.Name;
             subOvSkull.ResourceID = skullID.Value;
             subOvSkull.Resource = skullID.Resource;
-            subOvSkull.ColorTranslation = skinColors[SkinColorIndex];
+            subOvSkull.ColorTranslation = (skinColors.Length > SkinColorIndex) ? skinColors[SkinColorIndex] : (byte)0;
 
-            subOvHair.Name = hairIDs[HairIndex].Name;
-            subOvHair.ResourceID = hairIDs[HairIndex].Value;
-            subOvHair.Resource = hairIDs[HairIndex].Resource;
-            subOvHair.ColorTranslation = hairColors[HairColorIndex];
+            subOvHair.Name = (hairIDs.Length > HairIndex) ? hairIDs[HairIndex].Name : String.Empty;
+            subOvHair.ResourceID = (hairIDs.Length > HairIndex) ? hairIDs[HairIndex].Value : 0;
+            subOvHair.Resource = (hairIDs.Length > HairIndex) ? hairIDs[HairIndex].Resource : null;
+            subOvHair.ColorTranslation = (hairColors.Length > HairColorIndex) ? hairColors[HairColorIndex] : (byte)0;
 
-            subOvEyes.Name = eyeIDs[EyesIndex].Name;
-            subOvEyes.ResourceID = eyeIDs[EyesIndex].Value;
-            subOvEyes.Resource = eyeIDs[EyesIndex].Resource;
-            subOvEyes.ColorTranslation = skinColors[SkinColorIndex];
+            subOvEyes.Name = (eyeIDs.Length > EyesIndex) ? eyeIDs[EyesIndex].Name : String.Empty;
+            subOvEyes.ResourceID = (eyeIDs.Length > EyesIndex) ? eyeIDs[EyesIndex].Value : 0;
+            subOvEyes.Resource = (eyeIDs.Length > EyesIndex) ? eyeIDs[EyesIndex].Resource : null;
+            subOvEyes.ColorTranslation = (skinColors.Length > SkinColorIndex) ? skinColors[SkinColorIndex] : (byte)0;
 
-            subOvNose.Name = noseIDs[NoseIndex].Name;
-            subOvNose.ResourceID = noseIDs[NoseIndex].Value;
-            subOvNose.Resource = noseIDs[NoseIndex].Resource;
-            subOvNose.ColorTranslation = skinColors[SkinColorIndex];
+            subOvNose.Name = (noseIDs.Length > NoseIndex) ? noseIDs[NoseIndex].Name : String.Empty;
+            subOvNose.ResourceID = (noseIDs.Length > NoseIndex) ? noseIDs[NoseIndex].Value : 0;
+            subOvNose.Resource = (noseIDs.Length > NoseIndex) ? noseIDs[NoseIndex].Resource : null;
+            subOvNose.ColorTranslation = (skinColors.Length > SkinColorIndex) ? skinColors[SkinColorIndex] : (byte)0;
 
-            subOvMouth.Name = mouthIDs[MouthIndex].Name;
-            subOvMouth.ResourceID = mouthIDs[MouthIndex].Value;
-            subOvMouth.Resource = mouthIDs[MouthIndex].Resource;
-            subOvMouth.ColorTranslation = skinColors[SkinColorIndex];
+            subOvMouth.Name = (mouthIDs.Length > MouthIndex) ? mouthIDs[MouthIndex].Name : String.Empty;
+            subOvMouth.ResourceID = (mouthIDs.Length > MouthIndex) ? mouthIDs[MouthIndex].Value : 0;
+            subOvMouth.Resource = (mouthIDs.Length > MouthIndex) ? mouthIDs[MouthIndex].Resource : null;
+            subOvMouth.ColorTranslation = (skinColors.Length > SkinColorIndex) ? skinColors[SkinColorIndex] : (byte)0;
 
             RaisePropertyChanged(new PropertyChangedEventArgs(PROPNAME_GENDER));                
         }

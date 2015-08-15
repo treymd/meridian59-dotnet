@@ -41,13 +41,37 @@ namespace Meridian59.Files.ROO
     [Serializable]
     public class RooFile : IGameFile, IByteSerializableFast, ITickable
     {
+        /// <summary>
+        /// Bundles some info, used as return type in GetMaterialInfos()
+        /// </summary>
+        public struct MaterialInfo
+        {
+            public BgfBitmap Texture;
+            public string TextureName;
+            public string MaterialName;          
+            public V2 ScrollSpeed;
+
+            public MaterialInfo(
+                BgfBitmap Texture,
+                string TextureName,
+                string MaterialName,          
+                V2 ScrollSpeed)
+            {
+                this.Texture = Texture;
+                this.TextureName = TextureName;
+                this.MaterialName = MaterialName;
+                this.ScrollSpeed = ScrollSpeed;
+            }
+        }
+
         #region Constants
         public const uint SIGNATURE             = 0xB14F4F52;   // first expected bytes in file
         public const uint VERSION               = 13;           // current
+        public const uint VERSIONSPEED          = 10;           // first one that has additional "speed" values
         public const uint VERSIONMONSTERGRID    = 12;           // first one with monster grid
         public const uint VERSIONHIGHRESGRID    = 13;           // first one with highres grid
-        public const uint VERSIONSPEED          = 10;           // first one that has additional "speed" values
-        public const uint MINVERSION            = 9;            // absolute minimum
+        public const uint VERSIONFLOATCOORDS    = 14;           // first one with floating points
+        public const uint MINVERSION            = 9;            // absolute minimum we can handle
         public const uint ENCRYPTIONFLAG        = 0xFFFFFFFF;
         public const byte ENCRYPTIONINFOLENGTH  = 12;
         public const int DEFAULTCLIENTOFFSET    = 20;
@@ -58,7 +82,7 @@ namespace Meridian59.Files.ROO
         public const string ERRORCRUSHPLATFORM  = "Crusher is only supported in x86 builds on Windows.";      
         public static byte[] PASSWORDV12 = new byte[] { 0x6F, 0xCA, 0x54, 0xB7, 0xEC, 0x64, 0xB7, 0x00 };
         public static byte[] PASSWORDV10 = new byte[] { 0x15, 0x20, 0x53, 0x01, 0xFC, 0xAA, 0x64, 0x00 };
-        public static readonly int[] SectorDepths = new int[] { DEFAULTDEPTH0, DEFAULTDEPTH1, DEFAULTDEPTH2, DEFAULTDEPTH3 };
+        public static readonly int[] SectorDepths = new int[] { DEFAULTDEPTH0, DEFAULTDEPTH1, DEFAULTDEPTH2, DEFAULTDEPTH3 };     
         #endregion
 
         #region Events
@@ -494,7 +518,7 @@ namespace Meridian59.Files.ROO
             BSPTree = new List<RooBSPItem>(len);
             for (int i = 0; i < len; i++)
             {
-                RooBSPItem bspItem = RooBSPItem.ExtractBSPItem(Buffer, cursor);
+                RooBSPItem bspItem = RooBSPItem.ExtractBSPItem(RooVersion, Buffer, cursor);
                 cursor += bspItem.ByteLength;
 
                 BSPTree.Add(bspItem);     
@@ -508,14 +532,14 @@ namespace Meridian59.Files.ROO
             Walls = new List<RooWall>(len);           
             for (int i = 0; i < len; i++)
             {
-                RooWall lineDef = new RooWall(Buffer, cursor);               
+                RooWall lineDef = new RooWall(RooVersion, Buffer, cursor);               
                 cursor += lineDef.ByteLength;
 
                 lineDef.Num = i + 1;
                 Walls.Add(lineDef);               
             }
 
-            // Section 3: Unknown
+            // Section 3: WallsEditor
             cursor = OffsetWallsEditor + (Convert.ToByte(EncryptionEnabled) * 12);
             len = BitConverter.ToUInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
@@ -523,10 +547,11 @@ namespace Meridian59.Files.ROO
             WallsEditor = new List<RooWallEditor>(len);
             for (int i = 0; i < len; i++)
             {
-                RooWallEditor section3Item = new RooWallEditor(Buffer, cursor);
-                cursor += section3Item.ByteLength;
+                RooWallEditor wallEditor = new RooWallEditor(Buffer, cursor);
+                cursor += wallEditor.ByteLength;
 
-                WallsEditor.Add(section3Item);
+                wallEditor.Num = i + 1;
+                WallsEditor.Add(wallEditor);
             }
 
             // Section 4: SideDefs
@@ -554,11 +579,12 @@ namespace Meridian59.Files.ROO
             Sectors = new List<RooSector>(len);
             for (int i = 0; i < len; i++)
             {
-                RooSector sectorDef = new RooSector(Buffer, cursor, hasSpeed);
+                RooSector sectorDef = new RooSector(RooVersion, Buffer, cursor, hasSpeed);
                 cursor += sectorDef.ByteLength;
 
                 sectorDef.Num = i + 1;
                 sectorDef.TextureChanged += OnSectorTextureChanged;
+                sectorDef.Moved += OnSectorMoved;
                 Sectors.Add(sectorDef);
             }
 
@@ -705,7 +731,7 @@ namespace Meridian59.Files.ROO
             BSPTree = new List<RooBSPItem>(len);
             for (int i = 0; i < len; i++)
             {
-                RooBSPItem bspItem = RooBSPItem.ExtractBSPItem(ref Buffer);
+                RooBSPItem bspItem = RooBSPItem.ExtractBSPItem(RooVersion, ref Buffer);
                 
                 BSPTree.Add(bspItem);
             }
@@ -717,22 +743,23 @@ namespace Meridian59.Files.ROO
             Walls = new List<RooWall>(len);
             for (int i = 0; i < len; i++)
             {
-                RooWall lineDef = new RooWall(ref Buffer);
+                RooWall lineDef = new RooWall(RooVersion, ref Buffer);
                 
                 lineDef.Num = i + 1;
                 Walls.Add(lineDef);
             }
 
-            // Section 3: Unknown
+            // Section 3: WallsEditor
             len = *((ushort*)Buffer);
             Buffer += TypeSizes.SHORT;
 
             WallsEditor = new List<RooWallEditor>(len);
             for (int i = 0; i < len; i++)
             {
-                RooWallEditor section3Item = new RooWallEditor(ref Buffer);
-                
-                WallsEditor.Add(section3Item);
+                RooWallEditor wallEditor = new RooWallEditor(ref Buffer);
+
+                wallEditor.Num = i + 1;
+                WallsEditor.Add(wallEditor);
             }
 
             // Section 4: SideDefs
@@ -757,8 +784,9 @@ namespace Meridian59.Files.ROO
             Sectors = new List<RooSector>(len);
             for (int i = 0; i < len; i++)
             {
-                RooSector sectorDef = new RooSector(ref Buffer, hasSpeed);
+                RooSector sectorDef = new RooSector(RooVersion, ref Buffer, hasSpeed);
                 sectorDef.TextureChanged += OnSectorTextureChanged;
+                sectorDef.Moved += OnSectorMoved;
                 sectorDef.Num = i + 1;
                 Sectors.Add(sectorDef);
             }
@@ -975,7 +1003,7 @@ namespace Meridian59.Files.ROO
 
                 foreach (RooBSPItem item in BSPTree)
                 {
-                    if (item.Type == RooBSPItem.PartitionLineType)
+                    if (item.Type == RooBSPItem.NodeType.Node)
                         list.Add((RooPartitionLine)item);
                 }
 
@@ -995,7 +1023,7 @@ namespace Meridian59.Files.ROO
 
                 foreach (RooBSPItem item in BSPTree)
                 {
-                    if (item.Type == RooBSPItem.SubSectorType)
+                    if (item.Type == RooBSPItem.NodeType.Leaf)
                         list.Add((RooSubSector)item);
                 }
 
@@ -1014,12 +1042,6 @@ namespace Meridian59.Files.ROO
         /// See ResolveResources().
         /// </summary>
         public bool IsResourcesResolved { get; protected set; }
-
-        /// <summary>
-        /// List of currently active sector movements
-        /// </summary>
-        public List<SectorMove> MovingSectors { get; protected set; }
-
         #endregion
 
         #region Constructors
@@ -1034,7 +1056,6 @@ namespace Meridian59.Files.ROO
             SideDefs = new List<RooSideDef>();
             Sectors = new List<RooSector>();
             Things = new List<RooThing>();
-            MovingSectors = new List<SectorMove>();
         }
 
         /// <summary>
@@ -1043,7 +1064,6 @@ namespace Meridian59.Files.ROO
         /// <param name="FilePath"></param>
         public RooFile(string FilePath)
         {
-            MovingSectors = new List<SectorMove>();
             Load(FilePath);
         }
         #endregion
@@ -1147,7 +1167,7 @@ namespace Meridian59.Files.ROO
         /// <param name="IsFloor"></param>
         /// <param name="WithSectorDepth"></param>
         /// <returns>Height of point or -1 if no sector found for point</returns>
-        public int GetHeightAt(int x, int y, out RooSubSector SubSector, bool IsFloor = true, bool WithSectorDepth = false)
+        public Real GetHeightAt(Real x, Real y, out RooSubSector SubSector, bool IsFloor = true, bool WithSectorDepth = false)
         {
             SubSector = null;
 
@@ -1163,7 +1183,7 @@ namespace Meridian59.Files.ROO
                     return SubSector.Sector.CalculateCeilingHeight(x, y);
             }
 
-            return -1;
+            return -1.0f;
         }
         
         /// <summary>
@@ -1173,7 +1193,7 @@ namespace Meridian59.Files.ROO
         /// <param name="x"></param>
         /// <param name="y"></param>
         /// <returns>SubSector (leaf) or null</returns>
-        public RooSubSector GetSubSectorAt(int x, int y)
+        public RooSubSector GetSubSectorAt(Real x, Real y)
         {
             if (BSPTree.Count > 0)
                 return (RooSubSector)GetSubSectorAt(BSPTree[0], x, y);
@@ -1189,19 +1209,19 @@ namespace Meridian59.Files.ROO
         /// <param name="x"></param>
         /// <param name="y"></param>
         /// <returns></returns>
-        protected RooBSPItem GetSubSectorAt(RooBSPItem node, int x, int y)
+        protected RooBSPItem GetSubSectorAt(RooBSPItem node, Real x, Real y)
         {
             if (node == null)
                 return null;
 
             int side;
 
-            if (node.Type == RooBSPItem.SubSectorType)
+            if (node.Type == RooBSPItem.NodeType.Leaf)
                 return node;
             else
             {
                 RooPartitionLine line = (RooPartitionLine)node;
-                side = line.A * x + line.B * y + line.C;
+                side = Math.Sign(line.A * x + line.B * y + line.C);
 
                 if (side == 0)
                 {
@@ -1240,47 +1260,114 @@ namespace Meridian59.Files.ROO
         }
         
         /// <summary>
-        /// Returns the boundingbox of this room.
-        /// Z is height. Scale is ROO.
+        /// Calculates a two dimensional boundingbox for this room
+        /// on the fly - either based on walls or editor walls.
         /// </summary>
-        /// <returns></returns>
-        public Tuple<V3, V3> GetBoundingBox()
+        /// <param name="UseClientWalls"></param>
+        /// <returns>
+        /// If UseClientWalls=true, BoundingBox in 1:1024 scale based on RooWalls,
+        /// else BoundingBox in 1:64 based on RooEditorWalls
+        /// </returns>
+        public BoundingBox2D GetBoundingBox2D(bool UseClientWalls = true)
         {
-            int minheight = 0;
-            int maxheight = 1;
+            BoundingBox2D box;
 
-            if (Sectors.Count > 0)
+            // must have at least a wall 'or' editorwall
+            if ((UseClientWalls && Walls.Count == 0) || (!UseClientWalls && WallsEditor.Count == 0))
+                return BoundingBox2D.NULL;
+
+            // build based on clientwalls (1:1024)
+            if (UseClientWalls)
             {
-                minheight = Sectors[0].FloorHeight;
-                maxheight = Sectors[0].CeilingHeight;
+                box = new BoundingBox2D(Walls[0].P1, Walls[0].P2);
 
-                foreach (RooSector sector in Sectors)
+                for(int i = 1; i < Walls.Count; i++)
                 {
-                    if (sector.FloorHeight < minheight)
-                        minheight = sector.FloorHeight;
-
-                    if (sector.CeilingHeight > maxheight)
-                        maxheight = sector.CeilingHeight;
+                    box.ExtendByPoint(Walls[i].P1);
+                    box.ExtendByPoint(Walls[i].P2);
                 }
             }
 
-            // convert height to scale of width/length
-            minheight = minheight << 4;
-            maxheight = maxheight << 4;
-
-            V3 min = new V3(0.0f, 1.0f, minheight);
-            V3 max = new V3(0.0f, 1.0f, maxheight);
-
-            if (BSPTree.Count > 0)
+            // build based on editorwalls (1:64)
+            else
             {
-                min.X = BSPTree[0].X1;
-                min.Y = BSPTree[0].Y1;
+                box = new BoundingBox2D(WallsEditor[0].P0, WallsEditor[0].P1);
 
-                max.X = BSPTree[0].X2;
-                max.Y = BSPTree[0].Y2;
+                for(int i = 1; i < WallsEditor.Count; i++)
+                {
+                    box.ExtendByPoint(WallsEditor[i].P0);
+                    box.ExtendByPoint(WallsEditor[i].P1);
+                }
             }
 
-            return new Tuple<V3, V3>(min, max);
+            return box;          
+        }
+
+        /// <summary>
+        /// Calculates a three dimensional boundingbox for this room
+        /// on the fly - either based on walls or editor walls and on sectors.
+        /// Note: Z is the height.
+        /// </summary>
+        /// <returns>
+        /// If UseClientWalls=true, BoundingBox in 1:1024 scale based on RooWalls,
+        /// else BoundingBox in 1:64 based on RooEditorWalls
+        /// </returns>
+        public BoundingBox3D GetBoundingBox3D(bool UseClientWalls = true)
+        {
+            // must have at least a sector
+            if (Sectors.Count == 0)
+                return BoundingBox3D.NULL;
+
+            // get 2D boundingbox
+            BoundingBox2D box2D = GetBoundingBox2D(UseClientWalls);
+
+            // zero 2d box -> zero 3d box
+            if (box2D == BoundingBox2D.NULL)
+                return BoundingBox3D.NULL;
+
+            // initial 3d box based on 2d box and first sector
+            BoundingBox3D box3D = new BoundingBox3D(
+                new V3(box2D.Min.X, box2D.Min.Y, Sectors[0].FloorHeight),
+                new V3(box2D.Max.X, box2D.Max.Y, Sectors[0].CeilingHeight));
+
+            // extend by sector heights
+            for(int i = 1; i < Sectors.Count; i++)
+            {
+                box3D.ExtendByPoint(new V3(box3D.Min.X, box3D.Min.Y, Sectors[i].FloorHeight));
+                box3D.ExtendByPoint(new V3(box3D.Max.X, box3D.Max.Y, Sectors[i].CeilingHeight));
+            }
+           
+            // scale height from kod/editor fineness (1:64) to oldclient fineness (1:1024)
+            if (UseClientWalls)
+            {
+                box3D.Min.Z *= 16f;
+                box3D.Max.Z *= 16f;
+            }
+
+            return box3D;
+        }
+
+        /// <summary>
+        /// Returns the two dimensional boundingbox as stored
+        /// in Things section.
+        /// </summary>
+        /// <returns></returns>
+        public BoundingBox2D GetBoundingBox2DFromThings()
+        {
+            if (Things.Count < 2)
+                return BoundingBox2D.NULL;
+
+            BoundingBox2D box;
+            box.Min.X = (Real)Things[0].PositionX;
+            box.Min.Y = (Real)Things[0].PositionY;
+            box.Max.X = (Real)Things[0].PositionX;
+            box.Max.Y = (Real)Things[0].PositionY;
+            box.Min.X = Math.Min(box.Min.X, (Real)Things[1].PositionX);
+            box.Min.Y = Math.Min(box.Min.Y, (Real)Things[1].PositionY);
+            box.Max.X = Math.Max(box.Max.X, (Real)Things[1].PositionX);
+            box.Max.Y = Math.Max(box.Max.Y, (Real)Things[1].PositionY);
+            
+            return box;
         }
 
         /// <summary>
@@ -1289,88 +1376,263 @@ namespace Meridian59.Files.ROO
         /// </summary>
         /// <param name="Tick"></param>
         /// <param name="Span"></param>
-        public void Tick(long Tick, long Span)
+        public void Tick(double Tick, double Span)
         {
             // update wall animations
             foreach (RooSideDef wallSide in SideDefs)
                 if (wallSide.Animation != null)
                     wallSide.Animation.Tick(Tick, Span);
 
-            // update sector movements
-            for (int i = MovingSectors.Count - 1; i >= 0; i--)
-                MovingSectors[i].Tick(Tick, Span);
+            // update sectors
+            foreach (RooSector sector in Sectors)
+                sector.Tick(Tick, Span);
         }
-      
+
+        /// <summary>
+        /// Returns a MaterialInfo dictionary with all materials used in this roofile.
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, MaterialInfo> GetMaterialInfos()
+        {
+            Dictionary<string, MaterialInfo> list =
+                new Dictionary<string, MaterialInfo>();
+            
+            // add materials used on sector floors & ceilings
+            foreach (RooSector obj in Sectors)
+            {
+                if (obj.MaterialNameFloor != null && 
+                    obj.MaterialNameFloor != String.Empty && 
+                    !list.ContainsKey(obj.MaterialNameFloor))
+                { 
+                    list.Add(obj.MaterialNameFloor, new MaterialInfo(
+                        obj.TextureFloor,
+                        obj.TextureNameFloor,
+                        obj.MaterialNameFloor,
+                        obj.SpeedFloor));
+                }
+
+                if (obj.MaterialNameCeiling != null && 
+                    obj.MaterialNameCeiling != String.Empty && 
+                    !list.ContainsKey(obj.MaterialNameCeiling))
+                { 
+                    list.Add(obj.MaterialNameCeiling, new MaterialInfo(
+                        obj.TextureCeiling,
+                        obj.TextureNameCeiling,
+                        obj.MaterialNameCeiling,
+                        obj.SpeedCeiling));
+                }
+            }
+
+            // add materials used on sides
+            foreach (RooSideDef obj in SideDefs)
+            {
+                if (obj.MaterialNameLower != null && 
+                    obj.MaterialNameLower != String.Empty && 
+                    !list.ContainsKey(obj.MaterialNameLower))
+                { 
+                    list.Add(obj.MaterialNameLower, new MaterialInfo(
+                        obj.TextureLower,
+                        obj.TextureNameLower,
+                        obj.MaterialNameLower,
+                        obj.SpeedLower));
+                }
+
+                if (obj.MaterialNameMiddle != null && 
+                    obj.MaterialNameMiddle != String.Empty &&
+                    !list.ContainsKey(obj.MaterialNameMiddle))
+                {
+                    list.Add(obj.MaterialNameMiddle, new MaterialInfo(
+                        obj.TextureMiddle,
+                        obj.TextureNameMiddle,
+                        obj.MaterialNameMiddle,
+                        obj.SpeedMiddle));
+                }
+
+                if (obj.MaterialNameUpper != null && 
+                    obj.MaterialNameUpper != String.Empty &&
+                    !list.ContainsKey(obj.MaterialNameUpper))
+                { 
+                    list.Add(obj.MaterialNameUpper, new MaterialInfo(
+                        obj.TextureUpper,
+                        obj.TextureNameUpper,
+                        obj.MaterialNameUpper,
+                        obj.SpeedUpper));
+                }
+            }
+
+            return list;
+        }
+
         /// <summary>
         /// Checks a movement vector (Start->End) for wall collisions and
         /// returns a possibly adjusted movement vector to use instead.
         /// This might be a slide along a wall or a zero-vector for a full block.
         /// </summary>
-        /// <param name="Start">Startpoint of movement (in ROO coords)</param>
-        /// <param name="End">Endpoint of movement (in ROO coords)</param>
+        /// <param name="Start">Startpoint of movement. In FINENESS units (1:1024), Y is height.</param>
+        /// <param name="End">Endpoint of movement. In FINENESS units (1:1024).</param>
         /// <param name="PlayerHeight">Height of the player for ceiling collisions</param>
         /// <returns>Same or adjusted delta vector between Start and end (in ROO coords)</returns>
         public V2 VerifyMove(V3 Start, V2 End, Real PlayerHeight)
         {                       
             V2 Start2D = new V2(Start.X, Start.Z);
+            V2 newend = End;           
+            V2 rot;
+            RooWall wall;
 
-            // the move, if everything OK with this move
-            // this is the untouched return
-            V2 diff = End - Start2D;
+            const int MAXATTEMPTS = 8;
+            const Real ANGLESTEP = GeometryConstants.QUARTERPERIOD / 8;
 
-            // an extension to the delta for min. wall distance
-            V2 ext = diff.Clone();
-            ext.ScaleToLength(GeometryConstants.WALLMINDISTANCE);
+            /**************************************************************/
+
+            // first collision check
+            wall = VerifyMoveByTree(BSPTree[0], Start, End, PlayerHeight);
             
-            // this holds a possible collision wall
-            RooWall intersectWall = null;
+            // no collision with untouched move
+            if (wall == null)
+                return End - Start2D;
 
-            // look for blocking wall
-            foreach (RooWall wall in Walls)
+            /**************************************************************/
+
+            // try to slide along collision wall
+            newend  = wall.SlideAlong(Start2D, End);
+            wall    = VerifyMoveByTree(BSPTree[0], Start, newend, PlayerHeight);
+            
+            // no collision with 'slide along' move
+            if (wall == null)
+                return newend - Start2D;
+           
+            /**************************************************************/
+
+            // try find another collision wall
+            wall = VerifyMoveByTree(BSPTree[0], Start, End, PlayerHeight, wall);
+
+            if (wall != null)
             {
-                // check if the wall blocks the move including wallmin extension
-                if (wall.IsBlocking(Start, End + ext, PlayerHeight))
-                {
-                    intersectWall = wall;
-                    break;
-                }
+                // try to slide along other collision wall
+                newend  = wall.SlideAlong(Start2D, End);
+                wall    = VerifyMoveByTree(BSPTree[0], Start, newend, PlayerHeight);
+
+                // slide along other collision wall was ok
+                if (wall == null)
+                    return newend - Start2D;          
             }
 
-            // if there was an intersection, try to slide along wall
-            if (intersectWall != null)
+            /**************************************************************/
+
+            // sliding on collision walls does not work, try rotate a bit
+            for(int i = 0; i < MAXATTEMPTS; i++)
             {
-                V2 newend = intersectWall.SlideAlong(Start2D, End);
-                diff = newend - Start2D;
+                rot = End - Start2D;
+                rot.Rotate(-ANGLESTEP * (Real)i);
+                newend = Start2D + rot;
 
-                // an extension to the delta for min. wall distance
-                ext = diff.Clone();
-                ext.ScaleToLength(GeometryConstants.WALLMINDISTANCE);
+                wall = VerifyMoveByTree(BSPTree[0], Start, newend, PlayerHeight);
+                
+                // no collision
+                if (wall == null)
+                    return newend - Start2D;
 
-                // recheck slide for intersect with other walls
-                // this is necessary in case you get into a corner
-                // to not slide through other wall there
-                foreach (RooWall wall in Walls)
-                {
-                    // check if the wall blocks the move including wallmin extension
-                    if (wall.IsBlocking(Start, newend + ext, PlayerHeight))
-                    {
-                        diff.X = 0;
-                        diff.Y = 0;
-                        break;
-                    }
-                }
+                rot = End - Start2D;
+                rot.Rotate(ANGLESTEP * (Real)i);
+                newend = Start2D + rot;
+
+                wall = VerifyMoveByTree(BSPTree[0], Start, newend, PlayerHeight);
+
+                // no collision
+                if (wall == null)
+                    return newend - Start2D;
             }
 
-            return diff;
+            return new V2(0.0f, 0.0f);
         }
 
         /// <summary>
-        /// Verifies if any wall blocks a ray from Start to End
+        /// 
+        /// </summary>
+        /// <param name="Start"></param>
+        /// <param name="End"></param>
+        /// <param name="PlayerHeight"></param>
+        /// <returns></returns>
+        protected RooWall VerifyMoveByList(V3 Start, V2 End, Real PlayerHeight)
+        {
+            foreach (RooWall wall in Walls)
+                if (wall.IsBlockingMove(Start, End, PlayerHeight))
+                    return wall;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Collisions with wall segments for user movements using the BSP tree.
+        /// Therefore with logarithmic rather than linear costs.
+        /// </summary>
+        /// <param name="Node"></param>
+        /// <param name="Start"></param>
+        /// <param name="End"></param>
+        /// <param name="PlayerHeight"></param>
+        /// <param name="IgnoreWall"></param>
+        /// <returns></returns>
+        protected RooWall VerifyMoveByTree(RooBSPItem Node, V3 Start, V2 End, Real PlayerHeight, RooWall IgnoreWall = null)
+        {
+            if (Node == null || Node.Type != RooBSPItem.NodeType.Node)
+                return null;
+
+            /*************************************************************/
+
+            RooPartitionLine line = (RooPartitionLine)Node;
+            RooWall wall = line.Wall;
+            V2 start2D = new V2(Start.X, Start.Z);
+
+            /*************************************************************/
+            
+            // check node boundingbox
+            if (!line.BoundingBox.IsInside(End, GeometryConstants.WALLMINDISTANCE) && 
+                !line.BoundingBox.IsInside(start2D, GeometryConstants.WALLMINDISTANCE))
+                return null;
+       
+            /*************************************************************/
+
+            // test walls of splitter
+            while (wall != null)
+            {
+                if (wall != IgnoreWall && wall.IsBlockingMove(Start, End, PlayerHeight))
+                    return wall;
+
+                // loop over next wall in same plane
+                wall = wall.NextWallInPlane;
+            }
+
+            /*************************************************************/
+
+            RooWall wl = VerifyMoveByTree(line.LeftChild, Start, End, PlayerHeight, IgnoreWall);
+
+            if (wl != null)
+                return wl;
+
+            else
+                return VerifyMoveByTree(line.RightChild, Start, End, PlayerHeight, IgnoreWall);
+        }
+
+        /// <summary>
+        /// Verifies Line of Sight from Start to End.
+        /// Checking against Walls only (no sectors/ceilings).
         /// </summary>
         /// <param name="Start"></param>
         /// <param name="End"></param>
         /// <returns>True if OK, false if collision.</returns>
         public bool VerifySight(V3 Start, V3 End)
+        {
+            return VerifySightByTree(BSPTree[0], Start, End);
+            //return VerifySightByList(Start, End);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Start"></param>
+        /// <param name="End"></param>
+        /// <returns>True if OK, false if collision.</returns>
+        protected bool VerifySightByList(V3 Start, V3 End)
         {
             // look for blocking wall
             foreach (RooWall wall in Walls)            
@@ -1378,6 +1640,66 @@ namespace Meridian59.Files.ROO
                     return false;
                 
             return true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Node"></param>
+        /// <param name="Start"></param>
+        /// <param name="End"></param>
+        /// <returns>True if OK, false if collision.</returns>
+        protected bool VerifySightByTree(RooBSPItem Node, V3 Start, V3 End)
+        {
+            if (Node == null || Node.Type != RooBSPItem.NodeType.Node)
+                return true;
+
+            /*************************************************************/
+
+            RooPartitionLine line = (RooPartitionLine)Node;
+            RooWall wall = line.Wall;
+            V2 start2D = new V2(Start.X, Start.Z);
+            V2 end2D = new V2(End.X, End.Z);
+
+            /*************************************************************/
+
+            Real startDist  = line.GetDistance(start2D);
+            Real endDist    = line.GetDistance(end2D);
+
+            /*************************************************************/
+
+            // both endpoints on negative side
+            if (startDist < 0.0f && endDist < 0.0f)
+                return VerifySightByTree(line.LeftChild, Start, End);
+
+            // both endpoints on positive side
+            else if (startDist > 0.0f && endDist > 0.0f)
+                return VerifySightByTree(line.RightChild, Start, End);
+
+            // crosses infinite splitter or one or both points on splitter
+            else
+            {
+                // test walls of splitter
+                while (wall != null)
+                {
+                    if (wall.IsBlockingSight(Start, End))
+                        return false;
+
+                    // loop over next wall in same plane
+                    wall = wall.NextWallInPlane;
+                }
+
+                // must climb down both subtrees, go left first
+                bool wl = VerifySightByTree(line.LeftChild, Start, End);
+
+                // return collision if already found
+                if (wl == false)
+                    return wl;
+
+                // try other subtree otherwise
+                else
+                    return VerifySightByTree(line.RightChild, Start, End);
+            }           
         }
 
         /// <summary>
@@ -1417,10 +1739,10 @@ namespace Meridian59.Files.ROO
                     Real y = j * scale;
 
                     // lookup the height from roomdata
-                    int height = GetHeightAt(Convert.ToInt32(x), Convert.ToInt32(y), out subsector, IsFloor, WithSectorDepths);
+                    Real height = GetHeightAt(x, y, out subsector, IsFloor, WithSectorDepths);
                     
                     // process it
-                    if (height == -1 && (i > 0 || j > 0))
+                    if (height == -1.0f && (i > 0.0f || j > 0.0f))
                     {
                         // use prece
                         heights[(i * Size) + j] = heights[(i * Size) + j - 1];
@@ -1443,27 +1765,10 @@ namespace Meridian59.Files.ROO
         /// <param name="e"></param>
         protected void OnSectorMoved(object sender, EventArgs e)
         {
-            SectorMove move = (SectorMove)sender;
+            RooSector sector = (RooSector)sender;
 
             if (SectorMoved != null)
-                SectorMoved(this, new SectorMovedEventArgs(move));
-        }
-
-        /// <summary>
-        /// Executed when sectormove finished
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected void OnSectorMoveFinished(object sender, EventArgs e)
-        {
-            SectorMove move = (SectorMove)sender;
-
-            // detach listeners
-            move.Finished -= OnSectorMoveFinished;
-            move.Moved -= OnSectorMoved;
-
-            if (MovingSectors.Contains(move))
-                MovingSectors.Remove(move);
+                SectorMoved(this, new SectorMovedEventArgs(sector));
         }
 
         /// <summary>
@@ -1558,25 +1863,12 @@ namespace Meridian59.Files.ROO
         {
             SectorMove info = Message.SectorMove;
 
-            // first check if there is an existing move and if so adjust it
-            foreach (SectorMove obj in MovingSectors)
+            foreach (RooSector sector in Sectors)
             {
-                if (obj.SectorNr == info.SectorNr && obj.Type == info.Type)
-                {
-                    obj.Adjust(info);
-                    return;
-                }
+                // start / adjust movement on matching sectors
+                if (sector.ServerID == info.SectorNr)
+                    sector.StartMove(info);
             }
-
-            // if it's a new move -
-            // get affected sector reference and walls
-            info.ResolveAffected(this);
-
-            // hook up eventhandlers
-            info.Moved += OnSectorMoved;
-            info.Finished += OnSectorMoveFinished;
-
-            MovingSectors.Add(info);
         }
         #endregion
 

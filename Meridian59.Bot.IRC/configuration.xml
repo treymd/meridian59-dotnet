@@ -1,29 +1,70 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <configuration>
+
+  <!-- 
+    RESOURCES:
+      version: the Download= value from your client's meridian.ini
+      path: no need to touch this
+      preloadrooms/..: no need to touch these
+  -->
+  <resources
+    version="10016"
+    path="../../../../Resources/"
+    preloadrooms="false"
+    preloadobjects="false"
+    preloadroomtextures="false"
+    preloadsound="false"
+    preloadmusic="false" />
+
+  <!-- 
+    CONNECTIONS:
+      selectedindex: the 0-based entryindex to use from below
+  -->
+  <connections selectedindex="0">
+    <!-- 
+      CONNECTION:
+        name: just a name
+        host: DNS or IP of the M59 server
+        port: TCP port of the M59 server 
+        stringdictionary: string-resources (get this from the "resource" folder of your client)
+        username: your username
+        password: your password
+    -->
+    <connection
+      name="103"
+      host="meridian103.openmeridian.org"
+      port="5903"
+      useipv6="false"
+      stringdictionary="rsc0000-103.rsb"
+      username="user"
+      password=""
+      character="charactername">
+      <ignorelist />
+    </connection>
+    <connection
+      name="localhost"
+      host="127.0.0.1"
+      port="5959"
+      useipv6="false"
+      stringdictionary="rsc0000-git.rsb"
+      username="user"
+      password=""
+      character="charactername">
+      <ignorelist />
+    </connection>
+  </connections>
+  
+  <aliases />
   
   <!-- 
     CONNECTION:
-      host: DNS or IP of the M59 server
-      port: TCP port of the M59 server      
-      rsbfile: string-resources (get this from the "resource" folder of your client)  
-      username: your username
-      password: your password
-      character: your shopcharacter to log in
       majorverson: see client menu help/about
       minorversion: see client menu help/about
-      resourceversion: the Download= value from your client's meridian.ini
       logfile: the bot will log also to this file (cleaned at startup, "" to disable)
   -->
   <connection
-    host="meridian103.openmeridian.org"
-    port="5903"
-    rsbfile="rsc0000-103.rsb"
-    username="username"
-    password="password"
-    character="charactername"
     majorversion="70"
     minorversion="1"
-    resourceversion="10016"
     logfile="bot.log" />
 
   <!--

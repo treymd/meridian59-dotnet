@@ -10,8 +10,9 @@ namespace Meridian59 { namespace Ogre
 		
         // create billboardset
         billboardSet = SceneManager->createBillboardSet(ostr_name);
-        billboardSet->setBillboardType(BillboardType::BBT_POINT);
-		
+        billboardSet->setBillboardType(BillboardType::BBT_ORIENTED_SELF);
+		billboardSet->setUseAccurateFacing(true);
+
 		// note: IsHanging overlaps with some playertypes
 		// workaround: must not have set IsPlayer also
 		billboardSet->setBillboardOrigin(
@@ -31,6 +32,7 @@ namespace Meridian59 { namespace Ogre
         // create billboard to draw image on
         billboard = billboardSet->createBillboard(::Ogre::Vector3::ZERO);
         billboard->setColour(ColourValue::ZERO);
+		billboard->mDirection = ::Ogre::Vector3::UNIT_Y;
 
         // attach to scenenode        
         SceneNode->attachObject(billboardSet);
@@ -154,6 +156,24 @@ namespace Meridian59 { namespace Ogre
 			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameInvisible);
 		}
 
+		// BLACK (e.g. shadowform)
+		else if (RoomObject->Flags->Drawing == ObjectFlags::DrawingType::Black)
+		{
+			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameBlack);
+		}
+
+		// TARGET
+		else if (RoomObject->IsTarget)
+		{
+			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameTarget);
+		}
+
+		// MOUSEOVER
+		else if (RoomObject->IsHighlighted)
+		{
+			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameMouseOver);
+		}
+
 		// TRANSLUCENT		
 		// 75%
 		else if (RoomObject->Flags->Drawing == ObjectFlags::DrawingType::Translucent75)
@@ -172,12 +192,6 @@ namespace Meridian59 { namespace Ogre
 		{
 			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameTranslucent25);
 		}
-		
-		// BLACK (e.g. shadowform)
-		else if (RoomObject->Flags->Drawing == ObjectFlags::DrawingType::Black)
-		{
-			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameBlack);
-		}		
 
 		// DITHERINVIS (e.g. logoff ghost)
 		else if (RoomObject->Flags->Drawing == ObjectFlags::DrawingType::DitherInvis)
@@ -190,19 +204,7 @@ namespace Meridian59 { namespace Ogre
 		{
 			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameTranslucent50);
 		}
-
-		// TARGET
-		else if (RoomObject->IsTarget)
-		{
-			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameTarget);
-		}	
-
-		// MOUSEOVER
-		else if (RoomObject->IsHighlighted)
-		{
-			billboardSet->setMaterialName(*imageComposer->Image->MaterialNameMouseOver);
-		}
-
+		
 		// DEFAULT
 		else
 		{

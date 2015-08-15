@@ -15,11 +15,13 @@
 */
 
 using System;
+using System.Collections.Generic;
 using Meridian59.Common.Constants;
 using Meridian59.Common.Interfaces;
-using Meridian59.Files.BGF;
 using Meridian59.Common.Enums;
 using Meridian59.Common;
+using Meridian59.Files.BGF;
+using Meridian59.Data.Models;
 
 // Switch FP precision based on architecture
 #if X64
@@ -34,7 +36,7 @@ namespace Meridian59.Files.ROO
     /// A sector definition in a map file.
     /// </summary>
     [Serializable]
-    public class RooSector : IByteSerializableFast, IResourceResolvable
+    public class RooSector : IByteSerializableFast, IResourceResolvable, ITickable
     {
         // from roomanim.h:
         // "Number of milliseconds per pixel scrolled for various scrolling texture speeds"
@@ -65,36 +67,36 @@ namespace Meridian59.Files.ROO
         {
             int cursor = StartIndex;
 
-            Array.Copy(BitConverter.GetBytes(ServerID), 0, Buffer, cursor, TypeSizes.SHORT);        // Unknown1         (2 bytes)
+            Array.Copy(BitConverter.GetBytes(ServerID), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(FloorTexture), 0, Buffer, cursor, TypeSizes.SHORT);    // FloorTexture     (2 bytes)
+            Array.Copy(BitConverter.GetBytes(FloorTexture), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(CeilingTexture), 0, Buffer, cursor, TypeSizes.SHORT);  // CeilingTexture   (2 bytes)
+            Array.Copy(BitConverter.GetBytes(CeilingTexture), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(TextureX), 0, Buffer, cursor, TypeSizes.SHORT);        // TextureX         (2 bytes)
+            Array.Copy(BitConverter.GetBytes(TextureX), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(TextureY), 0, Buffer, cursor, TypeSizes.SHORT);        // TextureY         (2 bytes)
+            Array.Copy(BitConverter.GetBytes(TextureY), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(FloorHeight), 0, Buffer, cursor, TypeSizes.SHORT);     // FloorHeight      (2 bytes)
+            Array.Copy(BitConverter.GetBytes((short)FloorHeight), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Array.Copy(BitConverter.GetBytes(CeilingHeight), 0, Buffer, cursor, TypeSizes.SHORT);   // CeilingHeight    (2 bytes)
+            Array.Copy(BitConverter.GetBytes((short)CeilingHeight), 0, Buffer, cursor, TypeSizes.SHORT);
             cursor += TypeSizes.SHORT;
 
-            Buffer[cursor] = Light1;                                                                // Light1           (1 byte)
+            Buffer[cursor] = Light1;
             cursor++;
 
-            Array.Copy(BitConverter.GetBytes(Flags.Value), 0, Buffer, cursor, TypeSizes.INT);       // Flags            (4 bytes)
+            Array.Copy(BitConverter.GetBytes(Flags.Value), 0, Buffer, cursor, TypeSizes.INT);
             cursor += TypeSizes.INT;
 
             if (HasSpeed)
             {
-                Buffer[cursor] = Speed;                                                             // Speed            (1 bytes)
+                Buffer[cursor] = Speed;
                 cursor++;
             }
 
@@ -125,10 +127,10 @@ namespace Meridian59.Files.ROO
             *((short*)Buffer) = TextureY;
             Buffer += TypeSizes.SHORT;
 
-            *((short*)Buffer) = FloorHeight;
+            *((short*)Buffer) = (short)FloorHeight;
             Buffer += TypeSizes.SHORT;
 
-            *((short*)Buffer) = CeilingHeight;
+            *((short*)Buffer) = (short)CeilingHeight;
             Buffer += TypeSizes.SHORT;
 
             Buffer[0] = Light1;
@@ -170,10 +172,10 @@ namespace Meridian59.Files.ROO
             TextureY = BitConverter.ToInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            FloorHeight = BitConverter.ToInt16(Buffer, cursor);
+            FloorHeight = (Real)BitConverter.ToInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
-            CeilingHeight = BitConverter.ToInt16(Buffer, cursor);
+            CeilingHeight = (Real)BitConverter.ToInt16(Buffer, cursor);
             cursor += TypeSizes.SHORT;
 
             Light1 = Buffer[cursor];
@@ -191,12 +193,12 @@ namespace Meridian59.Files.ROO
             // Check for attached subinfo
             if (Flags.IsSlopedFloor)
             {
-                SlopeInfoFloor = new RooSectorSlopeInfo(Buffer, cursor);
+                SlopeInfoFloor = new RooSectorSlopeInfo(RooVersion, Buffer, cursor);
                 cursor += SlopeInfoFloor.ByteLength;
             }
             if (Flags.IsSlopedCeiling)
             {
-                SlopeInfoCeiling = new RooSectorSlopeInfo(Buffer, cursor);
+                SlopeInfoCeiling = new RooSectorSlopeInfo(RooVersion, Buffer, cursor);
                 cursor += SlopeInfoCeiling.ByteLength;
             }
 
@@ -220,10 +222,10 @@ namespace Meridian59.Files.ROO
             TextureY = *((short*)Buffer);
             Buffer += TypeSizes.SHORT;
 
-            FloorHeight = *((short*)Buffer);
+            FloorHeight = (Real)(*((short*)Buffer));
             Buffer += TypeSizes.SHORT;
 
-            CeilingHeight = *((short*)Buffer);
+            CeilingHeight = (Real)(*((short*)Buffer));
             Buffer += TypeSizes.SHORT;
 
             Light1 = Buffer[0];
@@ -240,10 +242,10 @@ namespace Meridian59.Files.ROO
 
             // Check for attached subinfo
             if (Flags.IsSlopedFloor)           
-                SlopeInfoFloor = new RooSectorSlopeInfo(ref Buffer);
+                SlopeInfoFloor = new RooSectorSlopeInfo(RooVersion, ref Buffer);
                            
             if (Flags.IsSlopedCeiling)
-                SlopeInfoCeiling = new RooSectorSlopeInfo(ref Buffer);
+                SlopeInfoCeiling = new RooSectorSlopeInfo(RooVersion, ref Buffer);
         }
 
         public byte[] Bytes
@@ -261,9 +263,32 @@ namespace Meridian59.Files.ROO
         }
         #endregion
 
+        /// <summary>
+        /// Raised when texture changed on this sector floor or ceiling.
+        /// </summary>
         public event SectorTextureChangedEventHandler TextureChanged;
+        
+        /// <summary>
+        /// Raised when calling Tick() and the sector moved a bit.
+        /// </summary>
+        public event EventHandler Moved;
+
+        /// <summary>
+        /// Adjacent walls
+        /// </summary>
+        protected readonly List<RooWall> walls = new List<RooWall>();
+
+        /// <summary>
+        /// Adjacent side-defs
+        /// </summary>
+        protected readonly List<RooSideDef> sides = new List<RooSideDef>();
 
         #region Properties
+        /// <summary>
+        /// 
+        /// </summary>
+        public uint RooVersion { get; set; }
+
         /// <summary>
         /// Version9 does not have the speed byte
         /// </summary>
@@ -300,14 +325,14 @@ namespace Meridian59.Files.ROO
         public short TextureY { get; set; }
 
         /// <summary>
-        /// Floor height
+        /// Floor height in server/new client FINENESS (1:64)
         /// </summary>
-        public short FloorHeight { get; set; }
+        public Real FloorHeight { get; set; }
 
         /// <summary>
-        /// Ceiling height
+        /// Ceiling height in server/new client FINENESS (1:64)
         /// </summary>
-        public short CeilingHeight { get; set; }
+        public Real CeilingHeight { get; set; }
 
         /// <summary>
         /// Light value
@@ -360,21 +385,6 @@ namespace Meridian59.Files.ROO
         /// Some custom userdata.
         /// </summary>
         public object UserData { get; set; }
-
-        /// <summary>
-        /// Some custom userdata
-        /// </summary>
-        public object UserData2 { get; set; }
-
-        /// <summary>
-        /// Some custom userdata for the floor
-        /// </summary>
-        public object UserDataFloor { get; set; }
-
-        /// <summary>
-        /// Some custom userdata for the ceiling
-        /// </summary>
-        public object UserDataCeiling { get; set; }
 
         /// <summary>
         /// 
@@ -442,12 +452,65 @@ namespace Meridian59.Files.ROO
                     (Real)Light1 * (1.0f / 128.0f);
             }
         }
+
+        /// <summary>
+        /// Adjacent walls. Will be filled when ResolveIndices() on RooWall is called.
+        /// </summary>
+        public List<RooWall> Walls
+        {
+            get { return walls; }
+        }
+
+        /// <summary>
+        /// Adjacent side-defs. Will be filled when ResolveIndices() on RooWall is called.
+        /// </summary>
+        public List<RooSideDef> Sides
+        {
+            get { return sides; }
+        }
+
+        /// <summary>
+        /// True if floor or ceiling are moving
+        /// </summary>
+        public bool IsMoving { get { return IsMovingFloor || IsMovingCeiling; } }
+
+        /// <summary>
+        /// True if floor has active movement
+        /// </summary>
+        public bool IsMovingFloor { get; protected set; }
+
+        /// <summary>
+        /// True if ceiling has active movement
+        /// </summary>
+        public bool IsMovingCeiling { get; protected set; }
+        
+        /// <summary>
+        /// Floor target height of move
+        /// </summary>
+        public Real MoveFloorHeight { get; set; }
+
+        /// <summary>
+        /// Ceiling target height of move
+        /// </summary>
+        public Real MoveCeilingHeight { get; set; }
+
+        /// <summary>
+        /// Speed of a possible ongoing floor movement
+        /// </summary>
+        public byte MoveFloorSpeed { get; set; }
+
+        /// <summary>
+        /// Speed of a possible ongoing ceiling movement
+        /// </summary>
+        public byte MoveCeilingSpeed { get; set; }
+
         #endregion
 
         #region Constructors
         /// <summary>
         /// Create instance from values
         /// </summary>
+        /// <param name="RooVersion"></param>
         /// <param name="ServerID"></param>
         /// <param name="FloorTexture"></param>
         /// <param name="CeilingTexture"></param>
@@ -460,13 +523,15 @@ namespace Meridian59.Files.ROO
         /// <param name="Flags"></param>
         /// <param name="Unknown4"></param>
         /// <param name="HasSpeed"></param>
-        public RooSector(short ServerID, 
+        public RooSector(uint RooVersion, 
+            short ServerID, 
             ushort FloorTexture, ushort CeilingTexture,
             short TextureX, short TextureY, 
-            short FloorHeight, short CeilingHeight, 
+            Real FloorHeight, Real CeilingHeight, 
             byte Light1, byte Light2,
             uint Flags, byte Unknown4, bool HasSpeed = true)
         {
+            this.RooVersion = RooVersion;
             this.ServerID = ServerID;
             this.FloorTexture = FloorTexture;
             this.CeilingTexture = CeilingTexture;
@@ -487,11 +552,14 @@ namespace Meridian59.Files.ROO
         /// <summary>
         /// Create instance from parser
         /// </summary>
+        /// <param name="RooVersion"></param>
         /// <param name="Buffer"></param>
         /// <param name="StartIndex"></param>
         /// <param name="HasSpeed"></param>
-        public RooSector(byte[] Buffer, int StartIndex = 0, bool HasSpeed = true)
+        public RooSector(uint RooVersion, byte[] Buffer, int StartIndex = 0, bool HasSpeed = true)
         {
+            this.RooVersion = RooVersion;
+
             SpeedCeiling = V2.ZERO;
             SpeedFloor = V2.ZERO;
 
@@ -502,10 +570,13 @@ namespace Meridian59.Files.ROO
         /// <summary>
         /// Create instance from parser
         /// </summary>
+        /// <param name="RooVersion"></param>
         /// <param name="Buffer"></param>
         /// <param name="HasSpeed"></param>
-        public unsafe RooSector(ref byte* Buffer, bool HasSpeed = true)
+        public unsafe RooSector(uint RooVersion, ref byte* Buffer, bool HasSpeed = true)
         {
+            this.RooVersion = RooVersion;
+
             SpeedCeiling = V2.ZERO;
             SpeedFloor = V2.ZERO;
 
@@ -522,6 +593,7 @@ namespace Meridian59.Files.ROO
         /// <param name="RaiseChangedEvent"></param>
         public void ResolveResources(ResourceManager M59ResourceManager, bool RaiseChangedEvent)
         {
+            // floor
             if (FloorTexture > 0)
             { 
                 ResourceFloor = M59ResourceManager.GetRoomTexture(FloorTexture);
@@ -553,6 +625,7 @@ namespace Meridian59.Files.ROO
                 SpeedFloor = V2.ZERO;
             }
             
+            // ceiling
             if (CeilingTexture > 0)
             {
                 ResourceCeiling = M59ResourceManager.GetRoomTexture(CeilingTexture);
@@ -586,39 +659,141 @@ namespace Meridian59.Files.ROO
         }
 
         /// <summary>
-        /// Returns the floorheight for a given point in roo scale,
-        /// note: there is no check whether this is or isn't in the sector
+        /// Starts a movement of the sector
+        /// </summary>
+        /// <param name="SectorMove"></param>
+        public void StartMove(SectorMove SectorMove)
+        {
+            if (SectorMove.Type == AnimationType.FLOORLIFT)
+            {
+                // set target height and speed for floor
+                MoveFloorHeight = (Real)SectorMove.Height;
+                MoveFloorSpeed = SectorMove.Speed;
+                IsMovingFloor = true;
+            }
+            else if (SectorMove.Type == AnimationType.CEILINGLIFT)
+            {
+                // set target height and speed for ceiling
+                MoveCeilingHeight = (Real)SectorMove.Height;
+                MoveCeilingSpeed = SectorMove.Speed;
+                IsMovingCeiling = true;
+            }
+        }
+
+        /// <summary>
+        /// Updates the movement
+        /// </summary>
+        /// <param name="Tick"></param>
+        /// <param name="Span"></param>
+        public void Tick(double Tick, double Span)
+        {
+            const Real EPSILON = 0.01f;
+
+            // nothing to do unless moving at least floor or ceiling
+            if (!IsMoving)
+                return;
+
+            /************************* FLOOR *************************/
+            if (IsMovingFloor)
+            {
+                // instant update of floor to new height
+                if (MoveFloorSpeed == 0)
+                {
+                    FloorHeight = MoveFloorHeight;
+                    IsMovingFloor = false;
+                }
+                else
+                {
+                    Real delta = MoveFloorHeight - FloorHeight;
+                    Real step = GeometryConstants.SECTORMOVEBASECOEFF * (Real)Span * (Real)MoveFloorSpeed;
+
+                    if (Math.Abs(delta) > EPSILON)
+                    {
+                        if (Math.Abs(step) > Math.Abs(delta))
+                            step = delta;
+
+                        else if (delta < 0.0f)
+                            step = -step;
+
+                        // apply step on floor height
+                        FloorHeight += step;
+                    }
+                    else
+                        IsMovingFloor = false;
+                }
+            }
+
+            /************************* CEILING *************************/
+            if (IsMovingCeiling)
+            {
+                if (MoveCeilingSpeed == 0)
+                {
+                    CeilingHeight = MoveCeilingHeight;
+                    IsMovingCeiling = false;
+                }
+                else
+                {
+                    Real delta = MoveCeilingHeight - CeilingHeight;
+                    Real step = GeometryConstants.SECTORMOVEBASECOEFF * (Real)Span * (Real)MoveCeilingSpeed;
+
+                    if (Math.Abs(delta) > EPSILON)
+                    {
+                        if (Math.Abs(step) > Math.Abs(delta))
+                            step = delta;
+
+                        else if (delta < 0.0f)
+                            step = -step;
+
+                        // apply step on floor height
+                        CeilingHeight += step;
+                    }
+                    else
+                        IsMovingCeiling = false;
+                }
+            }
+
+            /************************* SIDES *************************/
+            foreach (RooWall wall in walls)
+                wall.CalculateWallSideHeights();
+
+            /************************* EVENT *************************/
+            if (Moved != null)
+                Moved(this, new EventArgs());         
+        }
+
+        /// <summary>
+        /// Returns the floorheight for a given point in legacy client FINENESS (1:1024),
+        /// Note: There is no check if these coordinates are in the sector
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
         /// <param name="WithSectorDepth"></param>
-        public int CalculateFloorHeight(int x, int y, bool WithSectorDepth = false)
+        /// <returns>Height of the floor in legacy client FINENESS (1:1024)</returns>
+        public Real CalculateFloorHeight(Real x, Real y, bool WithSectorDepth = false)
         {
-            int height;
-
-            if (SlopeInfoFloor == null)
-                height = FloorHeight << 4;
-            else
-                height = (int)CalculateHeight(SlopeInfoFloor, x, y);
+            // get height in client fineness
+            Real height = (SlopeInfoFloor == null) ? 
+                FloorHeight * GeometryConstants.KODFINETOCLIENTFINE :
+                CalculateSlopeHeight(SlopeInfoFloor, x, y);
 
             if (WithSectorDepth)
             {
                 switch (Flags.SectorDepth)
                 { 
                     case RooSectorFlags.DepthType.Depth0:
-                        height -= RooFile.SectorDepths[0];
+                        height -= (Real)RooFile.SectorDepths[0];
                         break;
 
                     case RooSectorFlags.DepthType.Depth1:
-                        height -= RooFile.SectorDepths[1];
+                        height -= (Real)RooFile.SectorDepths[1];
                         break;
 
                     case RooSectorFlags.DepthType.Depth2:
-                        height -= RooFile.SectorDepths[2];
+                        height -= (Real)RooFile.SectorDepths[2];
                         break;
 
                     case RooSectorFlags.DepthType.Depth3:
-                        height -= RooFile.SectorDepths[3];
+                        height -= (Real)RooFile.SectorDepths[3];
                         break;
                 }
             }
@@ -627,17 +802,17 @@ namespace Meridian59.Files.ROO
         }
 
         /// <summary>
-        /// Returns the ceilingheight for a given point in roo scale,
-        /// note: there is no check whether this is or isn't in the sector
+        /// Returns the ceilingheight for a given point in legacy client FINENESS (1:1024),
+        /// Note: There is no check if these coordinates are in the sector
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
-        public int CalculateCeilingHeight(int x, int y)
+        /// <returns>Height of the ceiling in legacy client FINENESS (1:1024)</returns>
+        public Real CalculateCeilingHeight(Real x, Real y)
         {
-            if (SlopeInfoCeiling == null)
-                return CeilingHeight << 4;
-            else
-                return (int)CalculateHeight(SlopeInfoCeiling, x, y);
+            return (SlopeInfoCeiling == null) ? 
+                CeilingHeight * GeometryConstants.KODFINETOCLIENTFINE : 
+                CalculateSlopeHeight(SlopeInfoCeiling, x, y);
         }
 
         /// <summary>
@@ -647,8 +822,8 @@ namespace Meridian59.Files.ROO
         /// <param name="SlopeInfo"></param>
         /// <param name="x"></param>
         /// <param name="y"></param>
-        /// <returns></returns>
-        public static Real CalculateHeight(RooSectorSlopeInfo SlopeInfo, Real x, Real y)
+        /// <returns>Height of the point in legacy client FINENESS (1:1024)</returns>
+        public static Real CalculateSlopeHeight(RooSectorSlopeInfo SlopeInfo, Real x, Real y)
         {
             return (-SlopeInfo.A * x - SlopeInfo.B * y - SlopeInfo.D) / SlopeInfo.C;
         }
@@ -766,6 +941,8 @@ namespace Meridian59.Files.ROO
         /// <param name="TextureFile"></param>
         public void SetFloorTexture(ushort TextureNum, BgfFile TextureFile)
         {
+            string oldmaterial = MaterialNameFloor;
+
             FloorTexture = TextureNum;
             ResourceFloor = TextureFile;
 
@@ -789,7 +966,7 @@ namespace Meridian59.Files.ROO
             }
 
             if (TextureChanged != null)
-                TextureChanged(this, new SectorTextureChangedEventArgs(this, true));
+                TextureChanged(this, new SectorTextureChangedEventArgs(this, true, oldmaterial));
         }
 
         /// <summary>
@@ -799,6 +976,8 @@ namespace Meridian59.Files.ROO
         /// <param name="TextureFile"></param>
         public void SetCeilingTexture(ushort TextureNum, BgfFile TextureFile)
         {
+            string oldmaterial = MaterialNameCeiling;
+
             CeilingTexture = TextureNum;
             ResourceCeiling = TextureFile;
 
@@ -822,7 +1001,7 @@ namespace Meridian59.Files.ROO
             }
 
             if (TextureChanged != null)
-                TextureChanged(this, new SectorTextureChangedEventArgs(this, false));
+                TextureChanged(this, new SectorTextureChangedEventArgs(this, false, oldmaterial));
         }
         #endregion
     }

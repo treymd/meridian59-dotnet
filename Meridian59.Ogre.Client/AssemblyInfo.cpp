@@ -14,7 +14,6 @@ using namespace System::Security::Permissions;
 [assembly:AssemblyCopyrightAttribute("GPL 3.0")];
 [assembly:AssemblyTrademarkAttribute("")];
 [assembly:AssemblyCultureAttribute("")];
-[assembly:AssemblyVersionAttribute("1.0.3.3")];
+[assembly:AssemblyVersionAttribute("1.0.3.8")];
 [assembly:ComVisible(false)];
 [assembly:CLSCompliantAttribute(true)];
-[assembly:SecurityPermission(SecurityAction::RequestMinimum, UnmanagedCode = true)];

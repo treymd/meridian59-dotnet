@@ -311,14 +311,14 @@ namespace Meridian59.Data.Models
         #endregion
 
         #region IStringResolvable
-        public void ResolveStrings(LockingDictionary<uint, string> StringResources, bool RaiseChangedEvent)
+		public void ResolveStrings(StringDictionary StringResources, bool RaiseChangedEvent)
         {
             string spell_name;
             string spell_description;
-                
-            StringResources.TryGetValue(spellNameID, out spell_name);
-            StringResources.TryGetValue(spellDescriptionID, out spell_description);
-            
+
+			StringResources.TryGetValue(spellNameID, out spell_name);
+			StringResources.TryGetValue(spellDescriptionID, out spell_description);
+
             if (RaiseChangedEvent)
             {
                 if (spell_name != null) SpellName = spell_name;

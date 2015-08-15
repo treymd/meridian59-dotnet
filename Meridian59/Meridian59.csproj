@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -11,7 +11,8 @@
     <AssemblyName>Meridian59</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -26,6 +27,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DocumentationFile>bin\x64\Debug\Meridian59.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <PlatformTarget>x64</PlatformTarget>
@@ -35,6 +37,7 @@
     <DefineConstants>TRACE;WINCLR;DRAWING;CONCURRENT;X64</DefineConstants>
     <DocumentationFile>bin\x64\Release\Meridian59.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <PlatformTarget>x86</PlatformTarget>
@@ -43,6 +46,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DocumentationFile>bin\x86\Debug\Meridian59.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <PlatformTarget>x86</PlatformTarget>
@@ -52,16 +56,18 @@
     <Optimize>true</Optimize>
     <DocumentationFile>bin\x86\Release\Meridian59.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;ANYCPU</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;ANYCPU;CONCURRENT;</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <DocumentationFile>bin\Debug\Meridian59.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -72,6 +78,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <DocumentationFile>bin\Release\Meridian59.XML</DocumentationFile>
     <NoWarn>1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -87,12 +94,15 @@
     <Compile Include="Bot\BotServiceWrapper.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Common\BoundingBox3D.cs" />
+    <Compile Include="Common\BoundingBox2D.cs" />
     <Compile Include="Common\Config.cs" />
     <Compile Include="Common\Constants\ChatSubStrings.cs" />
     <Compile Include="Common\Constants\ResourceStrings.cs" />
     <Compile Include="Common\Crush32.cs" />
     <Compile Include="Common\Enums\KnownHotspot.cs" />
     <Compile Include="Common\Enums\HealthStatus.cs" />
+    <Compile Include="Common\Enums\LanguageCode.cs" />
     <Compile Include="Common\Enums\RoomAnimationAction.cs" />
     <Compile Include="Common\Enums\PlayerOverlayHotspot.cs" />
     <Compile Include="Common\Enums\LogType.cs" />
@@ -103,22 +113,30 @@
     <Compile Include="Common\Flags.cs" />
     <Compile Include="Common\GameTick.cs" />
     <Compile Include="Common\Interfaces\ITickable.cs" />
+    <Compile Include="Common\StringDictionary.cs" />
     <Compile Include="Common\LockingDictionary.cs" />
     <Compile Include="Common\LockingQueue.cs" />
     <Compile Include="Common\Logger.cs" />
     <Compile Include="Common\MeridianMD5.cs" />
     <Compile Include="Common\Outfitter.cs" />
+    <Compile Include="Common\Polygon.cs" />
     <Compile Include="Common\Util.cs" />
+    <Compile Include="Data\Lists\KeyValuePairStringList.cs" />
     <Compile Include="Data\Lists\MailList.cs" />
     <Compile Include="Data\Lists\RoomObjectListFiltered.cs" />
     <Compile Include="Data\Models\AdminData\AdminData.cs" />
+    <Compile Include="Data\Models\StatChangeInfo.cs" />
     <Compile Include="Data\Models\CharCreationInfo.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandCast.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandDM.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandGo.cs" />
+    <Compile Include="Data\Models\ChatCommand\ChatCommandGrouping.cs" />
+    <Compile Include="Data\Models\ChatCommand\ChatCommandQuit.cs" />
+    <Compile Include="Data\Models\ChatCommand\ChatCommandTempSafe.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandGoPlayer.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandGetPlayer.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandEmote.cs" />
+    <Compile Include="Data\Models\ChatCommand\ChatCommandDeposit.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandWithDraw.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandSuicide.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandRest.cs" />
@@ -131,9 +149,13 @@
     <Compile Include="Data\Models\GuildShieldInfo.cs" />
     <Compile Include="Data\Models\ObjectContents.cs" />
     <Compile Include="Data\Models\PlayerOverlay.cs" />
+    <Compile Include="Data\Models\KeyValuePairString.cs" />
     <Compile Include="Data\Models\RoomInfoFlags.cs" />
     <Compile Include="Data\Models\UserCommand\UserCommandClaimShield.cs" />
+    <Compile Include="Data\Models\UserCommand\UserCommandGrouping.cs" />
+    <Compile Include="Data\Models\UserCommand\UserCommandTempSafe.cs" />
     <Compile Include="Data\Models\UserCommand\UserCommandSuicide.cs" />
+    <Compile Include="Data\Models\UserCommand\UserCommandDeposit.cs" />
     <Compile Include="Data\Models\UserCommand\UserCommandWithDraw.cs" />
     <Compile Include="Data\Models\UserCommand\UserCommandGuildExile.cs" />
     <Compile Include="Data\Models\UserCommand\UserCommandGuildSetPassword.cs" />
@@ -225,7 +247,7 @@
     <Compile Include="Data\Models\ChatCommand\ChatCommandGuild.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandTell.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatStyle.cs" />
-    <Compile Include="Data\Models\ChatMessage.cs" />
+    <Compile Include="Data\Models\ServerString.cs" />
     <Compile Include="Data\Models\ConnectionInfo.cs" />
     <Compile Include="Data\Models\DiplomacyInfo.cs" />
     <Compile Include="Data\Models\DownloadFileInfo.cs" />
@@ -307,7 +329,6 @@
     <Compile Include="Drawing2D\ImageComposer.cs" />
     <Compile Include="Drawing2D\ImageComposerGDI.cs" />
     <Compile Include="Drawing2D\MiniMap.cs" />
-    <Compile Include="Drawing2D\MiniMapGDI.cs" />
     <Compile Include="Drawing2D\NameColors.cs" />
     <Compile Include="Drawing2D\PalettesGDI.cs" />
     <Compile Include="Files\BGF\BgfBitmap.cs" />
@@ -315,6 +336,7 @@
     <Compile Include="Files\BGF\BgfFile.cs" />
     <Compile Include="Files\BGF\BgfFrameSet.cs" />
     <Compile Include="Files\BSF\BsfFile.cs" />
+    <Compile Include="Files\ROO\BSPBuilder.cs" />
     <Compile Include="Files\ROO\SectorTextureChangedEvent.cs" />
     <Compile Include="Files\ROO\RooGrids.cs" />
     <Compile Include="Files\ROO\RooThingExtended.cs" />
@@ -326,9 +348,12 @@
     <Compile Include="Data\Models\AdminData\AdminObject.cs" />
     <Compile Include="Data\Models\AdminData\AdminObjectProperty.cs" />
     <Compile Include="Properties\Annotations.cs" />
+    <Compile Include="Protocol\GameMessages\GameMode\ChangedStatsMessage.cs" />
+    <Compile Include="Protocol\GameMessages\GameMode\ReqStatChangeMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\CancelOfferMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\CounterOfferedMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\ChangePasswordMessage.cs" />
+    <Compile Include="Protocol\GameMessages\GameMode\ReqInventoryMoveMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\ReqDepositMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\WithdrawAlListMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\ReqWithdrawAltemsMessage.cs" />
@@ -343,7 +368,6 @@
     <Compile Include="Protocol\GameMessages\LoginMode\LoginModeMessageMessage.cs" />
     <Compile Include="Protocol\GameMessages\LoginMode\ReqAdminMessageLoginMode.cs" />
     <Compile Include="Protocol\MessageEnrichment.cs" />
-    <Compile Include="Files\ResourceManagerConfig.cs" />
     <Compile Include="Files\ROO\BowtieFlags.cs" />
     <Compile Include="Files\ROO\RooSectorFlags.cs" />
     <Compile Include="Files\ROO\RooBSPItem.cs" />
@@ -357,7 +381,6 @@
     <Compile Include="Files\ROO\RooSideDef.cs" />
     <Compile Include="Files\ROO\RooSideDefFlags.cs" />
     <Compile Include="Files\ROO\RooSubSector.cs" />
-    <Compile Include="Files\ROO\RooVertex.cs" />
     <Compile Include="Files\RSB\RsbFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -561,7 +584,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Design\STYLEGUIDE.txt" />
-    <Content Include="gpl-3.0.txt" />
     <Content Include="zlib\license.txt" />
     <None Include="Resources\Glow.png" />
   </ItemGroup>

@@ -8,6 +8,10 @@ namespace Meridian59 { namespace Ogre
 		Window	= static_cast<CEGUI::FrameWindow*>(guiRoot->getChild(UI_NAME_SKILLS_WINDOW));
 		List	= static_cast<CEGUI::ItemListbox*>(Window->getChild(UI_NAME_SKILLS_LIST));
 		
+		// set window layout from config
+		Window->setPosition(OgreClient::Singleton->Config->UILayoutSkills->getPosition());
+		Window->setSize(OgreClient::Singleton->Config->UILayoutSkills->getSize());
+
 		// attach listener to avatar skills
 		OgreClient::Singleton->Data->AvatarSkills->ListChanged += 
 			gcnew ListChangedEventHandler(OnSkillsListChanged);
@@ -67,11 +71,7 @@ namespace Meridian59 { namespace Ogre
 		CEGUI::Window* icon		= dragger->getChildAtIdx(0);				
 		CEGUI::Window* name		= widget->getChildAtIdx(UI_SKILLS_CHILDINDEX_NAME);
 		CEGUI::Window* percent	= widget->getChildAtIdx(UI_SKILLS_CHILDINDEX_PERCENT);
-				
-		icon->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		name->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		percent->setMouseCursor(UI_MOUSECURSOR_TARGET);
-		
+
 		// insert in ui-list
 		if ((int)List->getItemCount() > Index)
 			List->insertItem(widget, List->getItemFromIndex(Index));
@@ -125,7 +125,7 @@ namespace Meridian59 { namespace Ogre
 					StringConvert::CLRToOgre(UI_NAMEPREFIX_STATICICON + obj->ResourceIconName + "/0");
 
 				// possibly create texture
-				Util::CreateTextureA8R8G8B8(obj->Resource->Frames[0], oStrName, UI_RESGROUP_IMAGESETS);
+				Util::CreateTextureA8R8G8B8(obj->Resource->Frames[0], oStrName, UI_RESGROUP_IMAGESETS, MIP_DEFAULT);
 
 				// reget TexPtr (no return from function works, ugh..)
 				TexturePtr texPtr = texMan->getByName(oStrName);
