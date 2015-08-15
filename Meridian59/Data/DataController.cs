@@ -18,6 +18,7 @@ using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Meridian59.Data.Models;
 using Meridian59.Data.Lists;
 using Meridian59.Protocol.GameMessages;
@@ -26,6 +27,7 @@ using Meridian59.Common;
 using Meridian59.Common.Enums;
 using Meridian59.Common.Constants;
 using Meridian59.Common.Interfaces;
+using Meridian59.Data.Models.AdminData;
 using Meridian59.Files.ROO;
 
 // Switch FP precision based on architecture
@@ -628,6 +630,8 @@ namespace Meridian59.Data
                 }
             }
         }
+
+        public AdminData AdminData { get; protected set; }
         #endregion
 
         #region Constructors
@@ -687,6 +691,8 @@ namespace Meridian59.Data
             WelcomeInfo = new WelcomeInfo();
             CharCreationInfo = new CharCreationInfo();
             ObjectContents = new ObjectContents();
+
+            AdminData = new AdminData();
 
             // some values
             ChatMessagesMaximum = 100;
@@ -762,6 +768,7 @@ namespace Meridian59.Data
             CharCreationInfo.Clear(true);
             ObjectContents.Clear(true);
             GuildShieldInfo.Clear(true);
+            AdminData.Clear(true);
 
             // reset values/references
             AvatarObject = null;
@@ -1447,6 +1454,10 @@ namespace Meridian59.Data
                 case MessageTypeGameMode.InvalidateData:            // 228
                     HandleInvalidateData((InvalidateDataMessage)Message);
                     break;
+
+                case MessageTypeGameMode.Admin:
+                    HandleAdminMessage((AdminMessage)Message);
+                    break;
             }
         }
 
@@ -1900,6 +1911,52 @@ namespace Meridian59.Data
                 ChatMessages.Remove(ChatMessages[0]);
 
             ChatMessages.Add(Message.Message);           
+        }
+
+        public void HandleAdminMessage(AdminMessage Message)
+        {
+            if (Message.Message.StartsWith(":< OBJECT"))
+            {
+                HandleAdminShowObjectMessage(Message);
+            }
+        }
+
+        protected void HandleAdminShowObjectMessage(AdminMessage Message)
+        {
+            //Look for object info
+            var regex = new Regex(@":< OBJECT (?<objectnumber>\d*) is CLASS (?<classname>.*)");
+            if (regex.IsMatch(Message.Message))
+            {
+
+
+            }
+            var matches = regex.Matches(Message.Message);
+            if (matches.Count < 1) //We should only get one of these at a time
+            {
+                return;
+            }
+            AdminObject obj = null;
+            foreach (Match match in matches) //but i dont know how to just do if -match will research
+            {
+                obj = new AdminObject(match.Groups["classname"].ToString(), Convert.ToInt32(match.Groups["objectnumber"].ToString()));
+            }
+
+            regex = new Regex(@": (?<property>\w*)\s*=\s(?<datatype>[\w$]*)\s(?<value>\d*)");
+            if (regex.IsMatch((Message.Message)))
+            {
+                BaseList<AdminObjectProperty> props = new BaseList<AdminObjectProperty>();
+                matches = regex.Matches(Message.Message);
+                foreach (Match match in matches)
+                {
+                    props.Add(new AdminObjectProperty(match.Groups["property"].ToString(), match.Groups["datatype"].ToString(), match.Groups["value"].ToString()));
+                }
+                if (obj != null)
+                {
+                    obj.SetProperties(props);
+                    AdminData.WatchObject(obj);
+                }
+
+            }
         }
 
         protected void HandleCharInfoNotOKMessage(CharInfoNotOkMessage Message)

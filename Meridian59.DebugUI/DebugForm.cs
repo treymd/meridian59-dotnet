@@ -24,6 +24,7 @@ using Meridian59.Protocol.Events;
 using Meridian59.Protocol.GameMessages;
 using Meridian59.Common.Enums;
 using Meridian59.Data.Models;
+using Meridian59.Data.Models.AdminData;
 using Meridian59.Files;
 
 namespace Meridian59.DebugUI
@@ -67,6 +68,7 @@ namespace Meridian59.DebugUI
                 roomInfoView.DataSource = dataController.RoomInformation;
                 lightShadingView.DataSource = dataController.LightShading;
                 backgroundMusicView.DataSource = dataController.BackgroundMusic;
+                DataController.AdminData.WatchObjectAdded += AdminInfoOnWatchObjectAdded;
             }
         }
 
@@ -81,20 +83,23 @@ namespace Meridian59.DebugUI
             }
         }
 
-        public AdminController AdminController { get; set; }
-
         public DebugForm()
         {
             InitializeComponent();
 
             guildMemberListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
             guildListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
-            AdminController = new AdminController();
+        }
+
+        private void AdminInfoOnWatchObjectAdded(AdminWatchObjectEventHandlerArgs args)
+        {
+            ObjectEditor oe = new ObjectEditor(args.AdminObject);
+            oe.Show();
         }
 
         public void HandleAdminMessage(AdminMessage Message)
         {
-            AdminController.HandleAdminMessage(Message);
+            
         }
 
         private void gamePacketViewer_PacketSend(object sender, GameMessageEventArgs e)
@@ -184,51 +189,9 @@ namespace Meridian59.DebugUI
         }
 
     }
+    
 
-    /// <summary>
-    /// These things need to be moved
-    /// </summary>
-
-    public class AdminObjectProperty
-    {
-        public string PropertyName { get; set; }
-        public string PropertyType { get; set; }
-        public string PropertyValue { get; set; }
-
-        public AdminObjectProperty(string name, string type, string value)
-        {
-            PropertyName = name;
-            PropertyType = type;
-            PropertyValue = value;
-        }
-    }
-
-    public class AdminObject
-    {
-        public List<AdminObjectProperty> Properties { get; private set; }
-        public string ClassName { get; set; }
-        public int ObjectNumber { get; set; }
-
-        public AdminObject(string classname, int objectnumber, List<AdminObjectProperty> props = null)
-        {
-            ClassName = classname;
-            ObjectNumber = objectnumber;
-            if (props != null)
-            {
-                Properties = props;
-            }
-            else
-            {
-                Properties = new List<AdminObjectProperty>();
-            }
-        }
-
-        //so later we can do thing upon property update
-        public void SetProperties(List<AdminObjectProperty> properties)
-        {
-            Properties = properties;
-        }
-    }
+    
 
     
 }
