@@ -347,7 +347,6 @@
     <Compile Include="Native\Wrapper.cs" />
     <Compile Include="Data\Models\AdminData\AdminObject.cs" />
     <Compile Include="Data\Models\AdminData\AdminObjectProperty.cs" />
-    <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\ChangedStatsMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\ReqStatChangeMessage.cs" />
     <Compile Include="Protocol\GameMessages\GameMode\CancelOfferMessage.cs" />
