@@ -37,6 +37,7 @@ namespace Meridian59.Data.Models.AdminData
         //Event to add an object 
         public delegate void AddTrackedAdminObjectEventHandler(object sender, AddTrackedAdminObjectEventHandlerArgs args);
         public event AddTrackedAdminObjectEventHandler AdminObjectAdded;
+
         protected void OnTrackedAdminObjectAdded(AddTrackedAdminObjectEventHandlerArgs e)
         {
             if (AdminObjectAdded != null) AdminObjectAdded(this, e);
@@ -149,7 +150,4 @@ namespace Meridian59.Data.Models.AdminData
         }
 
     }
-
-    
-
 }
