@@ -1,8 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Meridian59.Common.Interfaces;
 using Meridian59.Data.Lists;
+using Meridian59.Protocol.Events;
 using Meridian59.Protocol.GameMessages;
 
 namespace Meridian59.Data.Models.AdminData
@@ -10,28 +12,54 @@ namespace Meridian59.Data.Models.AdminData
     public class AdminData : INotifyPropertyChanged, IClearable
     {
 
-        public BaseList<AdminObject> TrackedObjects { get; set; }
+        private BaseList<AdminObject> TrackedObjects { get; set; }
+        public void TrackAdminObject(AdminObject adminObject)
+        {
+            TrackedObjects.Add(adminObject);
+            OnTrackedAdminObjectAdded(new AddTrackedAdminObjectEventHandlerArgs(this, adminObject));
+        }
+        public void UntrackAdminObject(AdminObject adminObject)
+        {
+            TrackedObjects.Remove(adminObject);
+        }
 
         public AdminData()
         {
             TrackedObjects = new BaseList<AdminObject>();
         }
 
-
+        /// <summary>
+        /// Interface to the Client's Network
+        /// </summary>
+        public event GameMessageEventHandler PacketSend;
 
         
-        public event AdminWatchObjectEventHandler WatchObjectAdded;
-        protected void OnWatchObjectAdded(AdminWatchObjectEventHandlerArgs e)
+        public event AddTrackedAdminObjectEventHandler WatchObjectAdded;
+        protected void OnTrackedAdminObjectAdded(AddTrackedAdminObjectEventHandlerArgs e)
         {
             if (WatchObjectAdded != null) WatchObjectAdded(this, e);
         }
-        public void WatchObject(AdminObject adminObject)
+
+        void adminObjectProperty_ValueChanged(object sender, PropertyChangedEventArgs e)
         {
-            TrackedObjects.Add(adminObject);
-            OnWatchObjectAdded(new AdminWatchObjectEventHandlerArgs(this, adminObject));
+            if (sender.GetType() == typeof (AdminObjectProperty))
+            {
+                AdminObjectProperty changedProperty = (AdminObjectProperty)sender;
+                AdminObject changedAdminObject = changedProperty.GetOwner();
+
+                if (PacketSend != null)
+                {
+                    PacketSend(this,new GameMessageEventArgs(new ReqAdminMessage(string.Format("set object {0} {1} {2} {3}",
+                        changedAdminObject.ObjectNumber, changedProperty.PropertyName, changedProperty.PropertyType, changedProperty.PropertyValue))));
+                    PacketSend(this, new GameMessageEventArgs(new ReqAdminMessage(String.Format("show object {0}", changedAdminObject.ObjectNumber))));
+                }
+
+            }
+            else
+            {
+                throw new Exception("What?");
+            }
         }
-
-
 
         #region INotifyPropertyChanged
 
@@ -51,52 +79,73 @@ namespace Meridian59.Data.Models.AdminData
         }
         #endregion
 
+        public void HandleAdminMessage(AdminMessage message)
+        {
+            if (message.Message.StartsWith(":< OBJECT"))
+            {
+                HandleAdminShowObjectMessage(message);
+            }
+        }
         public void HandleAdminShowObjectMessage(AdminMessage message)
         {
+            AdminObject obj = null;
+            bool track = false;
+
             //Look for object info
             var regex = new Regex(@":< OBJECT (?<objectnumber>\d*) is CLASS (?<classname>.*)");
             var matches = regex.Matches(message.Message);
-            if (matches.Count != 1) //TODO: We should only get one of these at a time but i dont know how to just do if (match), will research
+            if (matches.Count != 1)
             {
-                throw new Exception("Got too many or too few matches");
-                return;
-            }
-            AdminObject obj = null;
-            foreach (Match match in matches)
-            {
-                obj = new AdminObject(match.Groups["classname"].ToString(), Convert.ToInt32(match.Groups["objectnumber"].ToString()));
+                throw new Exception("Improper Response in HandleAdminShowObjectMessage()");
             }
 
-            regex = new Regex(@": (?<property>\w*)\s*=\s(?<datatype>[\w$]*)\s(?<value>\d*)");
+            string classname = matches[0].Groups["classname"].ToString();
+            int objectnumber = Convert.ToInt32(matches[0].Groups["objectnumber"].ToString());
+
+            if (TrackedObjects.Any(o => o.ObjectNumber == objectnumber))
+            {
+                obj = TrackedObjects.First(o => o.ObjectNumber == objectnumber);
+            }
+            else
+            {
+                obj = new AdminObject(classname, objectnumber);
+                track = true;
+            }
+
+            regex = new Regex(@": (?<property>\w*)\s*=\s(?<datatype>[\w$]*)\s(?<value>\w*)");
             if (regex.IsMatch((message.Message)))
             {
                 BaseList<AdminObjectProperty> props = new BaseList<AdminObjectProperty>();
                 matches = regex.Matches(message.Message);
                 foreach (Match match in matches)
                 {
-                    props.Add(new AdminObjectProperty(match.Groups["property"].ToString(), match.Groups["datatype"].ToString(), match.Groups["value"].ToString(),obj));
+                    props.Add(new AdminObjectProperty(match.Groups["property"].ToString(), match.Groups["datatype"].ToString(), match.Groups["value"].ToString(), obj, adminObjectProperty_ValueChanged));
                 }
                 if (obj != null)
                 {
                     obj.SetProperties(props);
-                    WatchObject(obj);
                 }
+            }
 
+            if (track)
+            {
+                TrackAdminObject(obj);
             }
         }
+
     }
 
-    public delegate void AdminWatchObjectEventHandler(object sender, AdminWatchObjectEventHandlerArgs args);
-
-    public class AdminWatchObjectEventHandlerArgs
+    public delegate void AddTrackedAdminObjectEventHandler(object sender, AddTrackedAdminObjectEventHandlerArgs args);
+    public class AddTrackedAdminObjectEventHandlerArgs
     {
         public AdminObject AdminObject;
         public object Sender;
 
-        public AdminWatchObjectEventHandlerArgs(object sender, AdminObject adminObject)
+        public AddTrackedAdminObjectEventHandlerArgs(object sender, AdminObject adminObject)
         {
             AdminObject = adminObject;
             Sender = sender;
         }
     }
+
 }
