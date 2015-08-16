@@ -2080,7 +2080,7 @@ namespace Meridian59.Data
             ChatMessages.Add(Message.Message);           
         }
 
-        public void HandleAdminMessage(AdminMessage Message)
+        protected void HandleAdminMessage(AdminMessage Message)
         {
             AdminData.HandleAdminMessage(Message);
         }
