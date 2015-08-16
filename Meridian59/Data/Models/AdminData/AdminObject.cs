@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using Meridian59.Data.Lists;
 
 namespace Meridian59.Data.Models.AdminData
@@ -39,12 +40,22 @@ namespace Meridian59.Data.Models.AdminData
         public AdminObject()
         {
             Properties = new BaseList<AdminObjectProperty>();
+            foreach (AdminObjectProperty property in Properties)
+            {
+                property.PropertyChanged += property_PropertyChanged;
+            }
+        }
+
+        void property_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            RaisePropertyChanged(e);
         }
 
         //so later we can do thing upon property update
         public void SetProperties(BaseList<AdminObjectProperty> properties)
         {
             Properties = properties;
+            RaisePropertyChanged(new PropertyChangedEventArgs("object"));
         }
 
         #region INotifyPropertyChanged

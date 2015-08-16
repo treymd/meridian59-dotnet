@@ -2082,48 +2082,7 @@ namespace Meridian59.Data
 
         public void HandleAdminMessage(AdminMessage Message)
         {
-            if (Message.Message.StartsWith(":< OBJECT"))
-            {
-                HandleAdminShowObjectMessage(Message);
-            }
-        }
-
-        protected void HandleAdminShowObjectMessage(AdminMessage Message)
-        {
-            //Look for object info
-            var regex = new Regex(@":< OBJECT (?<objectnumber>\d*) is CLASS (?<classname>.*)");
-            if (regex.IsMatch(Message.Message))
-            {
-
-
-            }
-            var matches = regex.Matches(Message.Message);
-            if (matches.Count < 1) //We should only get one of these at a time
-            {
-                return;
-            }
-            AdminObject obj = null;
-            foreach (Match match in matches) //but i dont know how to just do if -match will research
-            {
-                obj = new AdminObject(match.Groups["classname"].ToString(), Convert.ToInt32(match.Groups["objectnumber"].ToString()));
-            }
-
-            regex = new Regex(@": (?<property>\w*)\s*=\s(?<datatype>[\w$]*)\s(?<value>\d*)");
-            if (regex.IsMatch((Message.Message)))
-            {
-                BaseList<AdminObjectProperty> props = new BaseList<AdminObjectProperty>();
-                matches = regex.Matches(Message.Message);
-                foreach (Match match in matches)
-                {
-                    props.Add(new AdminObjectProperty(match.Groups["property"].ToString(), match.Groups["datatype"].ToString(), match.Groups["value"].ToString()));
-                }
-                if (obj != null)
-                {
-                    obj.SetProperties(props);
-                    AdminData.WatchObject(obj);
-                }
-
-            }
+            AdminData.HandleAdminMessage(Message);
         }
 
         protected void HandleCharInfoNotOKMessage(CharInfoNotOkMessage Message)

@@ -68,14 +68,34 @@ namespace Meridian59.DebugUI
                 roomInfoView.DataSource = dataController.RoomInformation;
                 lightShadingView.DataSource = dataController.LightShading;
                 backgroundMusicView.DataSource = dataController.BackgroundMusic;
-                DataController.AdminData.WatchObjectAdded += AdminInfoOnWatchObjectAdded;
+                DataController.AdminData.AdminObjectAdded += AdminInfoOnAdminObjectAdded;
+                DataController.AdminData.PacketSend += AdminData_PacketSend;
+                DataController.AdminData.LogAdminMessage += AdminData_LogAdminMessage;
             }
         }
 
-        private void AdminInfoOnWatchObjectAdded(object sender, AdminWatchObjectEventHandlerArgs args)
+        void AdminData_LogAdminMessage(LogAdminMessageEventHandlerArgs e)
+        {
+            txtAdminOutput.Text = e.AdminMessage + txtAdminOutput.Text;
+        }
+
+        void AdminData_PacketSend(object sender, GameMessageEventArgs e)
+        {
+            if (PacketSend != null)
+                PacketSend(this, e);
+        }
+
+        private void AdminInfoOnAdminObjectAdded(object sender, AddTrackedAdminObjectEventHandlerArgs args)
         {
             ObjectEditor oe = new ObjectEditor(args.AdminObject);
+            oe.Closing += oe_Closing;
             oe.Show();
+        }
+
+        void oe_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ObjectEditor oe = (ObjectEditor) sender;
+            DataController.AdminData.UntrackAdminObject(oe.GetTrackedObject());
         }
 
         private ResourceManager resourceManager;
@@ -95,11 +115,6 @@ namespace Meridian59.DebugUI
 
             guildMemberListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
             guildListViewer.PacketSend += new GameMessageEventHandler(gamePacketViewer_PacketSend);
-        }
-
-        public void HandleAdminMessage(AdminMessage Message)
-        {
-            
         }
 
         private void gamePacketViewer_PacketSend(object sender, GameMessageEventArgs e)

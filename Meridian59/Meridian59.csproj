@@ -125,6 +125,7 @@
     <Compile Include="Data\Lists\MailList.cs" />
     <Compile Include="Data\Lists\RoomObjectListFiltered.cs" />
     <Compile Include="Data\Models\AdminData\AdminData.cs" />
+    <Compile Include="Data\Models\AdminData\Events\AdminDataEvents.cs" />
     <Compile Include="Data\Models\StatChangeInfo.cs" />
     <Compile Include="Data\Models\CharCreationInfo.cs" />
     <Compile Include="Data\Models\ChatCommand\ChatCommandCast.cs" />
