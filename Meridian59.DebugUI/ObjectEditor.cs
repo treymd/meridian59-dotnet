@@ -13,7 +13,7 @@ namespace Meridian59.DebugUI
         public ObjectEditor(AdminObject obj)
         {
             InitializeComponent();
-            Text = String.Format("{0} {1}", obj.ObjectNumber, obj.ClassName);
+            Text = String.Format("{0} {1}", obj.ObjectNumber, obj.ClassName); 
             dataBindingSource = new BindingSource();
             dataBindingSource.DataSource = obj.Properties;
             dataGridView1.DataSource = dataBindingSource;
