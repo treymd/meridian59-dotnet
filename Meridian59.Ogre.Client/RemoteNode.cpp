@@ -20,7 +20,7 @@ namespace Meridian59 { namespace Ogre
 
 		// show boundingbox in debug builds
 #if _DEBUG
-        SceneNode->showBoundingBox(true);
+        SceneNode->showBoundingBox(false);
 #endif
 		// attach listener
         RoomObject->PropertyChanged += 

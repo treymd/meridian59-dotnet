@@ -39,8 +39,8 @@ namespace Meridian59 { namespace Ogre
         // create scenenode
         SceneNode = sceneManager->getRootSceneNode()->createChildSceneNode(ostr_node);
         SceneNode->attachObject(billboardSet);
-#if DEBUG
-        SceneNode->showBoundingBox(true);
+#if _DEBUG
+        SceneNode->showBoundingBox(false);
 #endif
         // possibly create attached light
         CreateLight();

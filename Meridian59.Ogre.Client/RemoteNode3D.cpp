@@ -166,7 +166,7 @@ namespace Meridian59 { namespace Ogre
         SceneNode->scale(*info->Scale);
         SceneNode->setInitialState();
 #if _DEBUG
-        SceneNode->showBoundingBox(true);
+        SceneNode->showBoundingBox(false);
 #endif
         // possibly add a text billboard with name
         //ProcessNameText();

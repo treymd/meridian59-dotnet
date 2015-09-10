@@ -1255,7 +1255,7 @@ namespace Meridian59 { namespace Ogre
 		SceneManager->setOption("Size", &octreeBox);
 		
 #ifdef _DEBUG
-		const bool showOctree = true;
+		const bool showOctree = false;
 		SceneManager->setOption("ShowOctree", &showOctree);
 #endif
 
